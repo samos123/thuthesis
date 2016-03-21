@@ -1,7 +1,7 @@
 # Makefile for ThuThesis
 
 # Compiling method: latexmk/xelatex/pdflatex
-METHOD = latexmk
+METHOD = xelatex
 # Set opts for latexmk if you use it
 LATEXMKOPTS = -xelatex
 # Basename of thesis
