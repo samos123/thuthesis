@@ -1213,7 +1213,7 @@
 % \changes{v5.3.1}{2016/03/20}{使用 \CTeX\ 默认中文字体配置，支持不同引擎。}
 % 使用 \pkg{ctexbook} 类，优于调用 \pkg{ctex} 宏包。
 %    \begin{macrocode}
-\LoadClass[a4paper,openany,UTF8,zihao=-4,scheme=plain]{ctexbook}
+\LoadClass[a4paper,openany,UTF8,zihao=-4,scheme=plain,fontset=ubuntu]{ctexbook}
 %    \end{macrocode}
 %
 % 用户至少要提供一个选项，指定论文类型。
@@ -3291,7 +3291,7 @@
 %<*dtx-style>
 \ProvidesPackage{dtx-style}
 \RequirePackage{hypdoc}
-\RequirePackage[UTF8,scheme=chinese]{ctex}
+\RequirePackage[UTF8,scheme=chinese,fontset=ubuntu]{ctex}
 \RequirePackage{newpxtext}
 \RequirePackage{newpxmath}
 \RequirePackage[
