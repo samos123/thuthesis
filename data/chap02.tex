@@ -40,14 +40,21 @@ CloudVision的服务。 控制层提供对外的服务然后业务层负责在�
 \label{sec:arch_control}
 在图\ref{fig:cloudvision-arch-control}可以看到CloudVision的
 控制与管理层内部的架构。客户段通过API层提供的HTTP REST API使用
-CloudVision的服务。然后CloudVision保存所有持久数据到MongoDB的数据库。
-API层通过AMQP协议发信息到信息队列。然后由API workers从
+CloudVision的服务。然后API层保存所有持久数据到MongoDB的数据库。
+API层通过AMQP协议发信息到信息任务队列。然后由API workers从
 信息队列收到的任务后，启动长期的业务处理的任务比如
 创建虚拟机，部署集群，在集群执行机器视觉任务等等。
 
+API Workers层的分布式任务队列
+是基于Celery实现。\cite{celery}如果API Workers负载和
+任务太多了我们可以随时增加更多的API Workers。新的
+API Workers会从任务队列立即分出来新的任务，提供
+Worker层的扩展性。API Workers是分成不同的类型
+独立运行：云平台管理，集群管理，任务管理。
+
 \begin{figure}[h]
   \centering
-    \includegraphics[width=0.85\textwidth]{cloudvision-arch-control}
+    \includegraphics[width=0.75\textwidth]{cloudvision-arch-control}
   \caption{CloudVision 控制与管理层架构和实现}
   \label{fig:cloudvision-arch-control}
 \end{figure}
@@ -59,41 +66,297 @@ Web段是基于Angular2和HTML Bootstrap框架开发，Web所有逻辑全部在�
 由Agular2从用户的浏览器直接通过AJAX HTTP请求调用CloudVision服务器段的REST API。
 
 \subsection{API层}
-API层是跑在CloudVision的服务器段提供对外的服务。它负责
-收到HTTP请求，保存数据然后把任务转到信息队列，转完了回HTTP应答。
-CloudVision的RESTP API定义五种资源：Cloud（基础施舍云)，Cluster(处理集群），
-Job（任务)，Job Template（任务模板)，Datasource（数据源）。
-
-\begin{table}[htb]
+API层是跑在CloudVision的服务器段提供对外的服务。
+在图\ref{fig:cloudvision-api-flowchart}负责
+收到HTTP请求，保存JSON格式数据到MongoDB数据库然后把任务转到信息队列，
+转完了回HTTP应答。 CloudVision的RESTP API定义五种资源：
+Cloud（云平台API访问信息)，Cluster(处理集群），
+Job Template（任务模板)，Job（任务)，Datasource（数据源）。
+\begin{figure}[h]
   \centering
-  \begin{minipage}[t]{0.95\linewidth} % 如果想在表格中使用脚注，minipage是个不错的办法
-  \caption[CloudVision API接口列表]{CloudVision API接口列表。}
-  \label{tab:template-files}
-    \begin{tabularx}{\linewidth}{lXlXlXlXl}
+    \includegraphics[width=0.85\textwidth]{cloudvision-api-flowchart}
+  \caption{CloudVision API Flowchart}
+  \label{fig:cloudvision-api-flowchart}
+\end{figure}
+
+
+在图\ref{fig:cloudvision-datamodel}描述每个资源的属性。Cloud(云平台)
+保存不同的共有云的API访问信息，比如如果provider是亚马逊credentials会保存
+AWS access key和secret key。Credentials的数据类型是dynamicDict，在不同的Provider
+保存的内容不一样。这个带来NoSQL数据库的灵活性，如果以后需要集成新的共有云我们不用改我们数据结构。
+只需要在应用层改动。
+
+Cluster(集群）保存在云平台上面的机器视觉处理集群。属性params类型是dynamicDict
+保存集群可调的参数比如集群大小，Spark版本等等。
+以后需要灵活可以增加参数所以选了dynamicDict。
+Cluster部署，扩展，删除的时候需要创建或者删除服务器，所以Cluster需要
+Cloud的API访问信息。
+
+Job Template(任务模板）保存怎么启动Job(任务)的信息。Job Template的
+jobLocation保存从哪里可以获取任务的程序。另外Job Template的
+argumentTemplate保存任务的参数和参数类型。如果要创建一个任务
+需要制定从哪个Job Template启动然后提供argumentTemplate里面
+的参数，同时也需要制定在哪个集群执行任务。在CloudVision用户
+可以自己定义任务模板同时CloudVision也自带一些常用的任务模板
+比如SIFT Feature Extraction。Feature Extraction作为一个任务
+模板的例子：
+\begin{lstlisting}[language=Python,basicstyle=\tiny,showstringspaces=false]
+{
+    "name": "Feature Extraction",
+    "type": "PySpark",
+    "jobLocation": "http://cloudvision.org/feature_extraction.py",
+    "argumentsTemplate": {
+        "feature_type": {"type": "string", "allowed": ["SIFT", "SURF"]},
+        "image_parquet_path": {"type": "InputLocation"},
+        "feature_parquet_path": {"type": "OutputLocation"},
+        "partitions": {"type": "number"},
+        "formatString": "$feature_type $image_parquet_path $feature_parquet_path $partitions"
+    }
+}
+\end{lstlisting}
+
+DataSource是管理常用的一些数据集。可以通过InputLocation作为任务的输入和输出。
+主要提供一个可以记录常用数据的目录和访问方法。
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=0.90\textwidth]{cloudvision-datamodel}
+  \caption{CloudVision 的数据模型。每个资源都有一个id。斜体表示自选。}
+  \label{fig:cloudvision-datamodel}
+\end{figure}
+
+在表\ref{tab:cloudvision-api}描述CloudVision每个资源提供的REST API接口。每个
+资源有一个自己的URL然后可以通过标准HTTP methods，创建，修改，删除和列出所有
+资源。\cite{wiki:rest}所有接口立即返回结果，长期的任务比如
+创建虚拟机和部署软件由API层发给控制层的API Workers。比如
+如果用户通过HTTP POST创建一个新的集群API层立即放回成功了创建
+状态是部署中，如果API Worker在部署中发生问题或者完成了它
+会即使更新资源的状态。
+
+\begin{table}[H]
+  \centering
+  \begin{minipage}[t]{0.98\linewidth} % 如果想在表格中使用脚注，minipage是个不错的办法
+  \caption[CloudVision API接口列表]{CloudVision REST API接口列表。
+    所有资源URI有一个baseURL开头比如\url{http://api.cloudvision.org/clouds}是Clouds完整的URI。}
+  \label{tab:cloudvision-api}
+    \begin{tabularx}{\linewidth}{lXXXX}
       \toprule[1.5pt]
         资源URI & GET & PUT & POST & DELETE \\
-        \$base/clouds & 返回用户所有云平台。支持分页，默认提供10件。 & 没使用 & 添加用户的基础施舍云API访问信息 & None \\
-        \$base/clouds/\{uuid\} & 返回所有云平台 & None &  None & None \\
-
+        /clouds & 返回所有云平台 & 没使用 & 添加和验证云平台API访问信息 & 没使用 \\
+        /clouds/\{id\} & 返回对应id=\{id\}的云平台 & 替换或新创建id=\{id\}云平台 &  没使用 & 删除对应id=\{id\}的云平台 \\
+        /clusters & 返回所有集群 & 没使用 & 添加集群和启动部署集群 & 没使用 \\
+        /clusters/\{id\} & 返回对应id=\{id\}的集群 & 替换或新创建id=\{id\}集群的信息 &  没使用 & 删除对应id=\{id\}的集群 \\
+        /job-templates & 返回所有任务模板 & 没使用 & 添加新的任务模板 & 没使用 \\
+        /job-templates/\{id\} & 返回对应id=\{id\}的任务模板 & 替换或新创建id=\{id\}任务模板 &  没使用 & 删除对应id=\{id\}的任务模板 \\
+        /jobs & 返回所有任务 & 没使用 & 添加和启动新的任务 & 没使用 \\
+        /jobs/\{id\} & 返回对应id=\{id\}的任务 & 替换或新创建id=\{id\}任务 &  没使用 & 删除对应id=\{id\}的任务 \\
+        /datasource & 返回所数据源 & 没使用 & 添加和验证新新的数据源 & 没使用 \\
+        /datasource/\{id\} & 返回对应id=\{id\}的数据源 & 替换或新创建id=\{id\}数据源 &  没使用 & 删除对应id=\{id\}的数据源 \\
       \bottomrule[1.5pt]
     \end{tabularx}
   \end{minipage}
 \end{table}
 
 
+\subsection{云平台管理}
+\label{subsec:api-worker-cloud}
+云平台管理模块是一种API Worker，基于Celery和任务队列可以异步执行基础施舍云资源相关的任务。
+云平台管理模块负责： 验证用户提供的云平台信息是否正确，
+在云平台里创建新的服务器，在云平台里删除服务器，
+管理云平台的网络资源。
 
-\subsection{基础设施云管理}
-\subsection{大数据与处理集群管理}
-\subsection{机器视觉任务管理}
-\subsection{数据源管理}
+云平台管理模块从API层和集群管理的API Worker收到AMQP信息。
+收到AMQP信息后启动模块内部的任务比如创建虚拟机。如果任务多了可以
+增加worker数。它提供3个RPC的接口：
+\begin{itemize}
+  \item verify\_credentials(cloud) \\
+        验证用户提供的云平台API访问信息。调用云平台的API使用列出所有服务器资源。如果API请求成功
+        更新数据库说明云平台资源可用。如果失败了更新数据库说明云平台资源有Authentication Error。
+  \item create\_servers(cloud, name, count) \\
+        在云平台里创建服务器的资源，可以同时创建多个服务器。create\_servers会通过云平台提供的
+        API创建服务器的资源。使用者也不需要知道是在OpenStack或者
+        AWS，通过Cloud.provider的参数CloudVision感知需要调用AWS或者OpenStack的API。
+        create\_vm会返回所有创建出来服务器的IP和访问信息。
+  \item delete\_servers(ids) \\
+        在云平台里删除服务器的资源。
+\end{itemize}
 
+\subsection{处理集群管理}
+\label{subsec:api-worker-cluster}
+处理集群管理模块是一种API Worker，基于Celery和任务队列以异步执行集群管理相关的任务。
+它主要负责部署和管理处理集群的资源和软件。集群管理模块通过3个RPC接口提供服务:
+\begin{itemize}
+  \item deploy(cluster) \\
+        在云平台创建和部署集群的软件。第一步会调用
+        在\ref{subsec:api-worker-cloud}定义的create\_servers。
+        创建了服务器后通过SSH和Ansible部署框架部署和配置集群
+        的软件。
+  \item add\_servers(cluster, role, count) \\
+        在已经部署完的集群增加服务器的资源。第一步会调用
+        在\ref{subsec:api-worker-cloud}定义的create\_servers，创建
+        更多的服务器资源。然后添加新服务器到Ansible的Inventory。
+        添加了后已通过Ansible Playbook写的自动部署软件和更新配置。
+  \item remove\_servers(cluster, count) \\
+        在已经部署完的集群删除服务器的资源。第一步会从Ansible的
+        Inventory删除需要删除的服务器，然后执行Ansible Playbook
+        自动更新集群里的软件配置。执行完了调用在\ref{subsec:api-worker-cloud}
+        的delete\_servers删除云平台的服务器。
+  \item destroy(cluster) \\
+        删除集群和所有用到的资源比如在云平台创建的服务器。
+  \item run\_command(cluster, target, command) \\
+        在部署完的集群执行Shell命令。Target可以制定需要在所有节
+        点执行还是在某一台服务器执行命令。
+\end{itemize}
+
+自动部署和配置软件主要用Ansible。为了实现CloudVision的和处理
+集群自动部署创造了Ansible CloudVision Playbook和新的Ansible Roles。
+CloudVision开发和用到的Ansible Roles包括Java, Mesos, Spark, Alluxio, OpenCV。
+CloudVision的Ansible Playbook定义在那些服务器组应用哪些Roles，每个
+Role怎么配置。CloudVision的Ansible Inventory定义两个服务器组：Masters和slaves。
+Deploy的时候会动态生产集群的Ansible Inventory和Playbook。
+
+\subsection{任务管理}
+任务管理模块是一种API Worker，基于Celery和任务队列可以异步执行集群里的任务。
+\begin{itemize}
+  \item run\_job(job) \\
+        执行一个处理任务。会在集群通过集群管理的接口run\_command
+        启发任务。CloudVision让每个任务在一个独立的Linux的screen instance
+        执行命令。这样可以保证任务不会因为链接断掉失败，同时也可以让用户容易
+        realtime attach到在执行的shell。启发后会每10秒检查状态更新在数据库的Job状态和日志一直
+        到结束或者失败会自动更新。
+  \item cancel\_job(job) \\
+        取消一个已经开始执行但是还没完成的任务。
+\end{itemize}
 
 \section{业务与处理层}
-\label{sec:arch_workers}
+\label{sec:arch_processing}
+在业务与处理层是执行机器视觉的任务。业在图\ref{fig:cloudvision-arch-processing}
+描述处理层的架构。务与处理集群是一个零时的集群，按需求部署和提供集群，
+处理完了可以立即把集群用到的资源收回来。按需求提供处理集群是云花整个CloudVision
+的平台。\cite{nistcloud}用户可以按需求占用，计费，扩展处理集群。为了满足按需求
+提供集群，CloudVision不保存任何长久数据在集群里面。CloudVision处理层使用
+云平台提供对象存储服务（Object Storage）保存长久数据比如数据集和处理结果。
+
+处理层需要高性能，高可靠，易用和可扩展性因此CloudVision
+选择使用Spark的成熟的大数据分布式处理平台。在Spark里可以调用Caffe和OpenCV软件。
+为了提高高性能选了Alluxio的内存分布式存储提供
+处理集群里的高性能零时存储。Alluxio可以缓存云平台的对象存储(Object Storage)另外
+也可以保存处理任务之间的中间结果。
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=0.99\textwidth]{cloudvision-arch-processing}
+  \caption{CloudVision 业务与处理层架构}
+  \label{fig:cloudvision-arch-processing}
+\end{figure}
+
+\subsection{易用}
+提供给机器视觉的研究员需要强调易用性。研究员经常专注在研究算法但是在集群维护和部署
+会却经验。CloudVision的处理层让研究员更容易的写大规模的机器视觉任务：
+\begin{itemize}
+  \item 多语言支持 \\
+        Spark支持用多个语言写处理的任务包含Python, Java和Scala。研究员可以用他习惯的语言
+        写处理任务。
+  \item 机器视觉工具 \\
+        CloudVision在处理集群部署好主流的机器视觉的工具OpenCV和Caffe。
+        可以直接从Python的Spark程序调用OpenCV的库。
+        也提供例子在Spark调用抽SIFT的特征。
+  \item 机器学习库 \\
+        提供Spark MLLib机器学习的库。比如研究员需要执行K-Means算法只需要制定数据集。
+  \item 简单化写分布式程序 \\
+        在写程序的时候提供更多灵活性。Hadoop Map/Reduce需要按照Map和Reduce
+        框架写程序。在Spark我们一样可以用Map/Reduce但是也提供很多其他
+        操作比如Map -> Filter -> Map -> Action。Spark让用户自己定义
+        操作的流程。
+  \item 简单通用文件格式 \\
+        提供一个容易可读和可写的文件格式叫Apache Parquet。Parquet文件可以
+        直接导入到Spark的DataFrame。Spark的DataFrame也可以直接写到Parquet
+        文件。
+\end{itemize}
+
+
+\subsection{高可靠}
+Spark的架构是一个高可用架构，主节点和计算节点都是高可用。在章
+\ref{subsubsec:spark}详细介绍Spark讲到Spark主节点可以通过Zookeeper
+达到高可用，Spark计算节点通过RRD分布重新计算可以达到高可用。
+
+长久存储由于云平台底层的对象存储技术负责提供高可用。AWS的S3对象
+存储通过SLA提供高可用的保证。在章\ref{subsubsec:openstack}
+描述了开源OpensStack的Swift对象存储怎么提供高可用。
+
+\subsection{高性能}
+机器视觉的任务比如学新的模型或者在大的数据集抽特征需要很长时间。有的任务都超过几个月的时间。
+为了让研究员不需要等那么就时间，CloudVision在处理层在几方面考虑性能：
+\begin{itemize}
+  \item 解决I/O瓶颈 \\
+        所有处理集群访问数据操作可以直接从本地内存读写。
+        Spark RRD/DataFrame分布到每个集群里的服务器内存。
+        特别在迭代算法不能每个迭代等待磁盘IO操作。CloudVision另外
+        解决Spark任务之间的I/O瓶颈。通过Alluxio内存缓存的分布式存储
+        我们可以保存Spark任务之间的中间结果。
+  \item 单节点处理能力优化 \\
+        通过GPU加速可以提高单机器的性能。GPU计算主要Caffe的
+        Deep Learning框架使用。用户创建集群的时候可以选是否需要GPU。
+  \item 大数据规模处理 \\
+        最近的数据集和real-world应用的数据机很大。比如ImageNet有140万图片，
+        总体大小大于28GB。如果一台服务器要处理整个数据集可能要几个月时间，
+        通过同时用所有服务器的CPU/GPU资源可以更快的做完任务。
+\end{itemize}
+
+\subsection{扩展性}
+发现处理能力或者存储容量不足需要弹性的扩展集群处理能力。
+传统的方式是纵向扩展，升级服务器的硬件比如升级CPU，内存和GPU。
+纵向扩展有一定的限制，第一它成本很高，第二只能扩展到单机器的限制。
+因此CloudVision的架构支持横向扩展，通过增加服务器可以增加处理能力。
+处理能力可以通过增加服务器资源提高，随时可以加新的服务器到原有的集群
+里面。新的机器可以快速的分担一部分的处理任务。
+\footnote{有的任务可能需要等到第二个处理节点才能分担任务。
+这个是跟Spark的data locality有关系。}
+
+长久存储由于云平台底层的对象存储技术负责提供扩展性。AWS的S3对象存储保证
+它的容量的扩展性。Dropbox也使用S3保存所有用户的数据，这也可以作为
+一个证据S3的扩展性也能符合CloudVision的需求。同样OpenStack的Swift
+对象存储也提供扩展性。Swift底层可以通过增加存储节点快速扩展它的存储
+容量。在章\ref{subsubsec:openstack}有详细介绍Swift的架构和扩展性。
 
 \section{基础设施层}
 \label{sec:arch_infra}
+CloudVision让用户不需要关心基础施舍层的设计和管理。
+CloudVision为用户使用最佳的做法设计了基础施舍的架构。
+在网络层，用户可以容易访问需要访问的资源但是同时不需要访问
+的资源它无法访问。在CloudVision服务器按不同的角色分成不同的组。
+
+在图\ref{fig:cloudvision-infra}可以看到CloudVision的基础施舍架构图。
+左边有控制与管理层的集群的资源。控制与管理集群
+定义物种类型服务器API Web Servers，MongoDB Servers，
+RabbitMQ Servers， API Workers。所有控制与管理服务器类型
+都在同一个独立的私内网络（VPC）。唯一有对外比如互联网IP是
+API Web Servers的负载均衡器。
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=0.99\textwidth]{cloudvision-infra}
+  \caption{CloudVision 基础施舍架构}
+  \label{fig:cloudvision-infra}
+\end{figure}
+
+在图\ref{fig:cloudvision-infra}的例子右边有两个业务与处理集群。
+这两个处理集群是被控制与管理集群自动创建与部署起来了。每个处理
+集群分成两种类型服务器：主节点和计算节点。主节点部署了是管理本
+集群的任务调度和部署。主节点也有一个对外提供的IP，对外唯一提供
+SSH服务。这样控制节点可以通过SSH公钥和私钥安全的控制整个集群。
+通过只提供主节点的接口我们保护其他节点直接从外面能访问。这里
+用到的云平台的网络隔离功能。
+
 
 
 \section{架构对比和实验}
 \label{sec:arch_experiment}
+
+Horizontal scaling
+
+Difference between Alluxio and no Alluxio
+业务与处理架构对比
+
+difference between reading from disk with opencv and using memory strings directly
+
+
+\section{架构结论}
