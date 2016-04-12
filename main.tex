@@ -13,12 +13,21 @@
 \usepackage{wrapfig}
 \usepackage{listings}
 \usepackage{url}
+\usepackage{titlesec}
+\usepackage{amsmath}
 
 % 定义所有的图片文件在 figures 子目录下
 \graphicspath{{figures/}}
 
 % 可以在这里修改配置文件中的定义。导言区可以使用中文。
 % \def\myname{薛瑞尼}
+
+\setcounter{secnumdepth}{4}
+\titleformat{\paragraph}
+{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}
+{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
 
 \begin{document}
 

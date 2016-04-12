@@ -2,20 +2,106 @@
 \label{cha:distributed_vision_library}
 Describe existing re-usable implementations
 
-\section{图像存储}
-SequenceFile
+\section{媒体存储结构}
+在大数据存储比如HDFS和对象存储高效批量处理小文件是一个问题。
+这里定义小文见是文件大小小于大数据存储的block size。Hadoop
+HDFS默认定义的block size是64MB。Swift和S3对象存储默认
+block size是32MB。图片大小一般是10KB - 200KB。
+如果直接保存图片，每个图片是一个独立的文件会
+造成处理的时候得每个图片单独读取，发多个请求。
+另外处理的时候Spark和Hadoop Map/Reduce也
+无法同时处理多个图片在同一个任务。
 
-Parquet
+目前在CloudVision通过两个方式解决高性能
+批量处理小文件的问题：使用SequenceFiles和
+Apache Parquet的存储格式和方式。SequenceFile提供
+图片存储，Parquet提供中间结果存储结构。
 
-Comparison
+
+\subsection{基于SequenceFile存储大量图片}
+Hadoop的SequenceFile格式可以保存Key/Value对。
+CloudVision使用SequenceFile保存大量的图片，Key是一个
+string用来保存图片文件名字，Value是一个Array[Bytes]用来保存
+图片的内容。
+
+SequenceFile可以被分段（splittable），这样Spark或者Map/Reduce的任务
+可以同时分别处理不同的分段，提高处理性能和并行化。
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=0.98\textwidth,trim=1 1 4 1,clip]{cloudvision-seqfile}
+  \caption{CloudVision 保存图片的SequenceFile格式和用法}
+  \label{fig:cloudvision-seqfile}
+\end{figure}
+
+在图\ref{fig:cloudvision-seqfile}有一个例子保存整个ImageNet2015数据集。
+黄色表示Key保存文件名字：1.jpg和蓝色表示图片的裸的bytes。SequenceFile可以有
+$N$个条目。
+
+为了容易让用户转换和上传数据集，CloudVision自开发了一个工具。
+在Listing \ref{lst:uploadseqfile}提供了几行工具主要代码。
+工具的输入是一个图片目录和输出目录，它从图片目录读取所有
+文件文件名和内容，创建出来一个SequenceFile在输出目录，
+将每个图片文件保存到SequenceFile里。比如用户可以这样
+调用工具：
+upload\_to\_seqfile /home/sam/imagenet2014 swift://spark.swift/imagenet2014.hseq，
+会将用户本地/home/sam/imagenet2014图片目录上传到Swift的对象存储保存一个SequenceFile，
+Swift里面文件名是imagenet2014.hseq。
+
+\begin{lstlisting}[language=Java,
+                   basicstyle=\tiny,
+                   showstringspaces=false,
+                   caption={UploadToSequenceFile工具},
+                   label={lst:uploadseqfile}]
+Path outputPath = new Path(outputPath);
+writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(seqFilePath), 
+            SequenceFile.Writer.keyClass(Text.class),
+            SequenceFile.Writer.valueClass(BytesWritable.class));
+for (File file : imageFiles) {
+    byte buffer[] = Files.toByteArray(file);
+    writer.append(new Text(file.getName()), new BytesWritable(buffer));
+}
+writer.close();
+\end{lstlisting}
+
+在后续的Spark任务可以通过SparkContext.sequenceFile直接读取SequenceFile。
+Spark会自动把Key,Value Pairs做成一个RDD。在章\ref{sec:feature-extraction}
+会有详细的例子使用图片的SequenceFile抽取特征。
+
+\subsection{基于Parquet通用数据结构}
+Parquet是提供一个通用的数据列式存储。列式存储
+按列保存数据，特别合适在批量处理使用。CloudVision
+主要用Parquet来保存所有处理的结果，比如从图片抽取的
+特征或者图像表示。
+在CloudVision选上了Parquet的原因有：
+\begin{itemize}
+  \item 通用性 \\
+        不同的处理平台都
+        支持Parquet的格式包含Spark, Hadoop Map/Reduce和Cascading。
+  \item 高效I/O \\
+        因为度数据的时候不需要扫描。Parquet列式存储底层使用blocks保存，
+        可以按整个block做一次IO请求读取block里面所有数据。另外可以
+        只选需要读取的列，降低需要读取的大小。
+  \item 高效压缩 \\
+        Parquet的压缩编码能减少存储使用的大小。
+  \item Spark SQL的DataFrame兼容性 \\
+        Spark natively支持Parquet的格式。通过Spark SQL可以直接
+        读取Parquet文件转成DataFrame，同样DataFrame可以直接
+        写成Parquet文件。
+\end{itemize}
+
+
 
 \section{特征抽取}
+\label{sec:feature-extraction}
 Hand-crafted features SIFT, SURF, HOG,
 First one to publish and succeed extracting SIFT/SURf features on Spark efficiently
 Learned Features CNN
 
 
-\section{BoW model}
+\section{特征编码与表示}
+Classic BoW with sparse vecotrs
+VLAD with distances and pooling same codebook as BoW
 Feature Detection -> Feature Descriptors -> Codebook Generation
 Feature Descriptors -> Codebook assign -> BoW -> Pooling -> 
 

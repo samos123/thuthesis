@@ -7,12 +7,13 @@ CloudVision的服务。 控制层提供对外的服务然后业务层负责在�
 基于一个消息队列转达任务和信息。通过分开控制层和处理层我们可以
 独立扩展两部分，也保持它们独立性。如果处理性能不足可以
 增加处理层的服务器。
-\begin{wrapfigure}{r}{0.5\textwidth}
+\begin{figure}[H]
   \centering
-  \includegraphics[width=0.48\textwidth]{cloudvision-arch}
+  \includegraphics[width=0.58\textwidth]{cloudvision-arch}
   \caption{CloudVision 总体架构}
   \label{fig:cloudvision-arch}
-\end{wrapfigure}
+\end{figure}
+
 控制与管理层负责:
 \begin{itemize}
   \item 对外提供\textbf{API}: 通过HTTP提供一个完整的RESTFUL API;
