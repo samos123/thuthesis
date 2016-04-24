@@ -387,13 +387,15 @@ HoG的算法把整个图像分成$n$个连在一起的区域(cells)，每个区�
   \label{fig:image-representation}
 \end{figure}
 
+Bow Intro, Dictionary Generation, Encoding, Classifier example
+
 \subsubsection{常用的分类器}
 \label{subsubsec:classifier}
 Based on probability, SVM, Naive Bayes
 
 \subsubsection{数据集}
 
-MNIST to Caltecht
+MNIST, Caltech, VOC, ImageNet
 
 \subsubsection{相关的软件}
 OpenCV, Caffe, vlfeat, scikit
@@ -404,14 +406,97 @@ Relationship of background to CloudVision
 
 \subsection{大数据与分布数处理研究现状}
 \label{subsec:bigdata_background}
+数据增长从稀缺到过多，带来新的好处，但是同时也带来新的挑战。
+互联网公司一直跟数据的快速曾长在战斗。谷歌（Google）每天处理24PB的数据。
+Facebook的用户每小时保存1000万个图片，每天用户点赞30亿次。点赞的数据
+可以用来分析用户的兴趣和爱好，推出更有效的广告。
+除了互联网公司之外，其他行业也面对数据成倍曾长的情况，同样想抓我新的机会。
+沃尔玛公司（Wal-Mart Stores Inc.)，来自与美国是一个在全球运营超市连锁企业，
+每小时处理100万的交易，保存到一个超过2.5PB的数据库，从这些数据沃尔玛找出买家的模式。
+数据在各个行业变了一个很重要的无形资产。\cite{mayer2013bigdata}
+
+大数据领域属于所有数据超过传统存储容量和处理能力，利用这些海量数据
+得到商务的优势。可以用3V数据曾长模型描述数据：
+\begin{itemize}
+  \item Volume（数据量）： 数据的大小比如1PB。
+  \item Velocity（速）：数据的输入和输出速度，比如每分钟保存1TB新数据。
+  \item Variety（多样性）：数据包含不同的数据类型，比如文本，视频，图像，社交网络等等。
+\end{itemize}
+Gartner用3V模型定义成大数据："大数据是量特别大，高速曾长，多样性的数据
+，这些数据为了创造价值需要特殊的技术与分析模型。"\cite{bigdatadefinition}
+
+在2004年Google发布了"MapReduce：简单化集群的数据处理"，描述Google内部用的
+模型和技术解决大数据的挑战。\cite{dean2008mapreduce}
+MapReduce是一个框架，用来在集群并行处理大数据。MapReduce程序组成一个Map（映射）函数和
+Reduce（归纳）函数。Map函数一般用来过滤和数据预处理，然后由Reduce函数总结数据比如算出平均值。
+用MapReduce函数是一个从函数变成范式借过来的。MapReduce贡献点是在于提出怎么在集群里高效与可靠
+并行执行MapReduce程序。MapReduce使用数据的局部性，处理数据在接近的节点减少数据移动。
+
+在2006年Doug Cutting被Google FileSystem和MapReduce收到启发开发了开源的Apache Hadoop。
+\cite{gfs2003, dean2008mapreduce, wiki:hadoop}Apache Hadoop是一个开源框架提供
+，在普通硬件上的大数据集分布式存储与处理。Hadoop变了一个世界上的大数据技术标准，
+大互联网公司和企业都在用，典型的包含Facebook，Baidu，Yahoo，Ebay，Spotify。
+在本章\ref{subsubsec:hadoop}会详细介绍Hadoop的框架和架构。
+
+在2009年，UC Berkeley的AMPLab开始开发了Spark，一个开源集群分布式处理框架。\cite{wiki:spark}
+Spark改善了MapReduce分布式框架，用内存运算技术提高性能，另外提供一个更灵活
+的编程范式，不限于用Map/Reduce函数。Spark编程范式，合适于机器学习的算法和其他
+迭代形式的算法。在本章\ref{subsubsec:spark}会详细介绍Spark。
+
+
+
+\subsubsection{Apache Hadoop}
+\label{subsubsec:hadoop}
+Apache Hadoop是一个开源被Apache维护的分布式存储与处理框架。
+Hadoop所有模块都设计到，如果任意件硬件所发生故障不影响数据丢失
+和处理的结果。
+Apache Hadoop框架核心模块有：
+\begin{itemize}
+  \item Hadoop Common：所有模块用的程序库和工具。
+  \item Hadoop Distributed File System(HDFS)：分布式存储文件系统，使用普通的电脑与服务器提供
+        高效，容量大的可靠的存储集群。
+  \item Hadoop MapReduce：一个基于Google提出的MapReduce范式分布式处理实现集群分布式处理。
+  \item Hadoop YARN：集群资源管理，用来调度用户提交的分布式处理任务，比如调度MapReduce任务。
+\end{itemize}
+除了Apache Hadoop核心之外，Hadoop也变成了一个生态系统，HBase(基于HDFS的NoSQL)，Hive(数据仓库)等等都属于
+Hadoop的生态系统。Apache Hadoop大部分代码用Java写的，少部分脚本用Python写的，还有少部分Native代码用C写的。
+
+\paragraph*{Hadoop Distributed File System}
+HDFS是Hadoop实现的分布式，可扩展，高可用文件系统。一个HDFS集群分两种主要节点：Namenode和Datanode。
+HDFS集群一般有一个Namenode，由它保存记录和目录的层次和namespace(命名空间)。Namenode使用inodes表示文件和目录。Inode记录
+文件和目录的属性比如权限，修改与访问时间，空间配额和命名空间。HDFS把文件的内容分成多个blocks（块），默认一块是128MB，
+然后将每个块独立复制到多个（默认是3个）不同的datanodes。Namenode维护一个命名空间对应块的树，记录文件所有块保存在
+那个datanode。
+
+在图\ref{fig:hdfs-arch}描述HDFS的集群架构，为简单起见当时集群保存了一个350MB的文件，名字是example.txt。
+文件会分成$\ceil{\frac{350}{128}} = 3$个块，分别为B1，B2，B3。每一块需要保存3份到不同的datanode。
+
+\begin{figure}
+  \centering
+    \includegraphics[width=0.85\textwidth]{hdfs-arch}
+    \caption{HDFS的集群架构。}
+  \label{fig:hdfs-arch}
+\end{figure}
+
+
+\paragraph*{Hadoop Compatible File System}
+
+\paragraph*{Hadoop Map/Reduce}
+
 
 \subsubsection{Apache Spark}
 \label{subsubsec:spark}
 Spark History, Arch, HA
 
+\subsubsection{Apache Mesos}
+
+
+\subsubsection{大数据总结}
+
 \subsection{云计算领域研究现状}
 \label{subsec:cloud_background}
-NIST definition with characteristics
+云计算是通过网络按需求提供计算资源（比如服务器，网络，存储，应用，服务），资源可以快速调配和解放，
+调配与解放需要运营商的没有或者少量管理工作。
 
 \subsubsection{Amazon AWS}
 S3 and compute
@@ -436,6 +521,7 @@ Introduce Ansible, Roles, Playbooks. Refer to Chapter
 
 Research on latest state-of-the art, architecture
 
-OpenStack Private Cloud Deployment
+Development of all components: REST-API, UI, Spark algorithms,
 
+OpenStack Private Cloud Deployment
 
