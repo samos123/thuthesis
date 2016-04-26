@@ -74,21 +74,21 @@
 % \ckeywords{\TeX, \LaTeX, CJK, 模板, 论文}
 
 \begin{eabstract}
-    Computer Vision has been gaining more popularity and has found it’s way into daily
+    Computer Vision has been gaining more popularity and has found it's way into daily
     life applications such as Autonomous Vehicles. This has resulted in both larger
     datasets and more compute intensive workloads. Researchers in computer vision now
     not only need to solve algorithmic problems, but also need to dig into distributed
     computing, big data and computing infrastructure in order to solve state-of-the art
     computer vision problems. Basic steps such as feature extraction, dictionary learning,
-    feature coding/pooling and implementing common classifiers shouldn’t have to be
+    feature coding/pooling and implementing common classifiers shouldn't have to be
     implemented again and again by researchers. We present CloudVision, a cloud platform
     for Computer Vision users and researchers to efficiently run large-scale computer
     vision applications in a distributed fashion on demand.
 
     At the core, an horizontally scale-able architecture is used. This is necessary to
     meet the demands of large and increasing datasets. Hadoop Distributed File System(HDFS)
-    or Hadoop Compatible File Systems(HCFS) can be used as the storage layer for images, videos
-    and other related persistent storage. Spark is used for efficient distributed computing
+    or Hadoop Compatible File Systems(HCFS) can be used as the peristent storage layer for images, videos
+    and representations. Spark is used for efficient distributed computing
     with a large set of existing libraries, that can be used in computer vision. OpenCV and Caffe
     are run on top of Spark to provide a large library of existing computer vision algorithms
     out of the box.
@@ -96,12 +96,13 @@
     In general computer vision software such as OpenCV and Caffe requires strong
     infrastructure and software deployment expertise. CloudVision removes this barrier by
     providing the platform as a service and by automating the deployment of CloudVision
-    itself. CloudVision supports automated provisioning deployment to OpenStack and AWS
+    itself. CloudVision supports automated provisioning and deployment to OpenStack and AWS
     clouds. Automatic software deployment and configuration is done through Ansible.
 
-    This paper introduces CloudVision, through showing our architecture, showing that
-    algorithms implemented on CloudVision can scale horizontally and compare different
-    architectures through benchmarks.
+    This paper introduces CloudVision, through in-depth review of the architecture and
+    example implementations of state-of-the-art computer visions algorithms implemented
+    on top of CloudVision, showing thatalgorithms implemented on CloudVision can scale horizontally
+    and compare different architectures through benchmarks.
 
 \end{eabstract}
 

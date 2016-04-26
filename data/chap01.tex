@@ -124,7 +124,7 @@ SVM到现在一直站稳了分类器的优选位子，无论用深度学习
 的特征或者SIFT都使用SVM的分类器。
 
 \subsubsection{常用的特征与特征编码}
-\label{subsubsec:image_features}
+\label{intro:image_features}
 本章现在常用的特征与表示详细介绍不同特征的特点，抽取方法，缺点与亮点。
 最后讲特征的转吗与表示方法的特点，转吗方法，缺点与两但。
 这章把特征分成两种：人工特征与学习出来的特征。人工特征由于人手工制作的抽取
@@ -367,6 +367,7 @@ HoG的算法把整个图像分成$n$个连在一起的区域(cells)，每个区�
 
 
 \subsubsection{特征转吗与图像表示}
+\label{subsubsec:feature-encoding}
 在图\ref{fig:image-representation}可以看到经典的工作流。
 第一步从图片抽取特征描述比如SIFT，
 第二部从特征描述转吗到图像表示(Image Representation)，
@@ -487,6 +488,7 @@ HDFS集群一般有一个Namenode，由它保存记录和目录的层次和names
 \subsubsection{Apache Spark}
 \label{subsubsec:spark}
 Spark History, Arch, HA
+Driver, Cluster Manager and Executors
 
 \subsubsection{Apache Mesos}
 
@@ -495,26 +497,333 @@ Spark History, Arch, HA
 
 \subsection{云计算领域研究现状}
 \label{subsec:cloud_background}
-云计算是通过网络按需求提供计算资源（比如服务器，网络，存储，应用，服务），资源可以快速调配和解放，
-调配与解放需要运营商的没有或者少量管理工作。
+云计算是一个通过网络按需求提供计算资源（比如服务器，网络，存储，应用，服务）的模型，
+资源可以快速调配和解放，
+调配与解放资源需要运营商少量的管理工作。\cite{mell2011nist}
+云计算的模型有五个特性：
+\begin{itemize}
+  \item 按需的自助服务 - 
+        用户随时可以调配与使用资源。调配过程不需要任何人的参与。
+  \item 用网络提供接入 - 
+        资源与功能可以通过网络被访问。推动不同的客户端都可以访问，比如手机，浏览器。
+  \item 资源池化 - 
+        运营商的的计算资源是池化，动态按需给用户分配物理或者虚拟计算资源。用户无感知
+        具体那些物理资源分配给他，用户只知道给他分配了他需要的资源。池化资源例子包括
+        存储，计算，内存和网络带宽。
+  \item 高弹性 - 
+        资源与功能可以弹性的调配与解放。某些场景也提供自动调配与解放支持按业务量的自动扩展。
+        对于用户来说，他感知云提供的资源是无限，无论什么时候都可以调配他需要的资源。
+  \item 计量服务 - 
+        云平台用计量的功能自动控制与优化资源。所有资源的使用的数据报给运营商和用户。
+\end{itemize}
+云的模型分成不同的服务类型：Software as a Service(SaaS)，Platform as a Service(PaaS)，
+Infrastructure as a Service。SaaS直接给用户提供应用层的服务，用户可以通过瘦客户端使用应用，
+用户不需要管理底层的云基础施舍。PaaS提供给用户一个软件执行环境，用户可以容易部署自己开发的
+或者现有的软件，运营商提供变成语言执行环境，编程库，和工具，用户不需要管理底层的基础施舍。
+IaaS是提供基础施舍的资源比如服务器，存储和网络的资源。
+如果用户或者企业想用到云，他可以选不同的云部署模型：
+\begin{itemize}
+  \item Private Cloud（私有云）- 
+        云平台基础施舍资源限于单个机构使用。
+  \item Public Cloud（公有云）- 
+        云平台基础施舍资源开放给大家使用。多个用户共享同一个云平台。
+  \item Hybrid Cloud（混合云）-
+        云平台基础施舍是由于公有云和私有云组建的。使用特殊的技术做
+        多云平台数据转播和负载均衡。
+\end{itemize}
+
+分析了云计算的定义与概念后，可以了解到，它对于用户带来的价值。
+通过云提供的按需自助服务，用户自己不需要管理基础资源，他需要资源
+可以灵活的占用需要的资源，通过云的多租户性其他用户可以使用他解放的资源，提供
+资源的有效使用和快速上线业务能力。
+
+企业可以用云平台减少资本支出，之前企业需要自己长期投资数据中心，用云企业可以
+按需求用IT的资源，只付企业用具体用到的资源。
 
 \subsubsection{Amazon AWS}
-S3 and compute
+Amazon AWS(Amazon Web Services)是美国亚马逊公司提供的公有云。
+AWS在12个地区的数据中心，是世界规模和用户最大的公有云。
+亚马逊本身是一个电子商务互联网公司，
+因此有大量的数据中心投入和IT资源管理的需求。自己要求
+所有IT资源是标准化和自动化。算出来发现如果只是自己用
+浪费很多数据中心的资源，同时可以当作一个额外的收入。
+在2015的第四节，报道的收入是24亿，说明AWS当时的决策
+是正确的。
+
+AWS主要提供IaaS服务，计算，网络和存储。计算服务有
+Amazon Elastic Compute Cloud(EC2)是基于Xen虚拟化按用户需求
+提供虚拟机的计算服务。EC2把虚拟机叫做Instance（实例）。用户
+可以随时创建，启动和删除实例，EC2会按照按小时算出用户花的钱。
+创建时候可以选镜像和实例类型(Instance Type)。
+镜像可以是EC2提供制作好的镜像或者提供自己的镜像。
+实例类型定义虚拟机CPU，内存，磁盘或者其他特性比如GPU，SSD。
+cg1.4xlarge和g2.2xlarge类型提供NVIDIA Tesla GPU，合适于在
+GPU计算应用使用，比如深度学习。
+
+AWS的主要基础施舍存储服务有两种，Elastic Block Storage(EBS)和Simple Storage Service(S3)。
+EBS给EC2的实例提供块存储，可以理解为虚拟硬盘。EC2实例可以按需求连接和卸载EBS提供的块设备。
+S3是一个独立的对象存储服务，可以通过标准的HTTP REST，SOAP，BitTorrent接口，保存，访问，删除任何文件。
+S3通过SLA保证数据容量扩展性，高可用和数据持久性。
+S3经典用户有Reddit，Dropbox，Tumblr，Pinterest。\cite{wiki:s3}
+
+AWS的基础施舍网络有，Virtual Private Cloud(VPC)，Elastic Load Balancing(ELB)，Route 53。
+VPC给EC2的实例内部隔离网络的功能，用户可以按需求定义多个隔离的网络。原来所有EC2的
+实例共享一个网络而且所有实例有个互联网IP地址。通过VPC可以提高安全，只对外提供
+服务实例分配互联网IP地址，其他使用VPC的网络。另外用户也可以通过VPN，连到VPC内
+的实例，这样可以把企业内部数据中心安全的连到VPC内的资源。
+ELB是AWS的负载均衡服务，可以把从外面进来的流量均衡到EC2的实例。
+提高应用级别的高可用和扩展性。AWS保证负载均衡器本身的高可用与扩展性。
+ELB也集成EC2的Auto Scaling功能，压力大时候可以自动扩展添加更多的EC2实例。
+Route 53是AWS的高可用和可扩展的DNS服务。Route 53集成AWS的其他的服务，比如
+ELB，S3，EC2实力等等。可以用Route 53提供负载均衡的域名。
+
+除了IaaS的基础施舍之外AWS也提供一些PaaS服务，其中有
+Database as a Service（数据库服务）和Elastic Map Reduce(Hadoop服务）。
+
 
 \subsubsection{OpenStack}
 \label{subsubsec:openstack}
-Swift and compute
+OpenStack是一个开源软件云平台，主要用于提供IaaS的基础施舍服务。
+OpenStack由多个组管理数据中心的计算，存储和网络资源池。用户
+可以通过RESTful API或者Web UI使用OpenStack的服务。
+\begin{wrapfigure}{r}{0.45\textwidth}
+  \centering
+    \includegraphics[width=0.44\textwidth]{openstack-mitaka-loc-contributors}
+    \caption{OpenStack的Mitaka版本贡献者排名，按Lines of Code排序。\cite{stackalytics_mitaka_loc}}
+  \label{fig:openstack-contributors}
+\end{wrapfigure}
+OpenStack的API抽象出来IT的资源，OpenStack的灵活架构支持多种
+技术实现计算，网络和存储的管理。比如计算服务可以用KVM，VMware或者
+裸服务器提供给用户计算资源。
 
-\subsection{自动部署现况}
+OpenStack最早来自NASA和RackSpace合作，开发一个AWS的开源实现。
+经过OpenStack的发展和成功，NASA和RackSpace给了非盈利的OpenStack Foundation
+所有运营权经营权和所有权，促进开放。
+
+
+在2016年发布的Mitaka版本，OpenStack由25000贡献者来自1500多不同的公司贡献了OpenStack社区的代码。\cite{stackalytics_mitaka_loc}
+在图\ref{fig:openstack-contributors}，可以看到全世界前10名公司的贡献者，第一名是Mirantis，第二名是IBM，
+第三名是HP和Red Hat(红帽）。多个大企业的贡献和投资意即OpenStack成为开源云平台的标准。
+
+OpenStack在各个行业都有大户包括互联网，金融，电信，教育，企业和运营商。
+大部分用户用来内部的私有云，但是也有公司基于OpenStack提供公有云的业务。
+在2016的4月OpenStack Foundation做的用户调查，用户提到选OpenStack的主要原因是：
+\begin{itemize}
+  \item 标准化开放平台的API，统一在公有云和私有云可以通用。
+  \item 通过开放的平台避免厂家锁定，提供可选的技术方案。
+  \item 通过快速上线新应用，提高创业性和竞争能力。
+  \item 提高运营效率。
+  \item 减少成本，OpenStack比其他私有云方案成本底。
+  \item 参与活跃全球性的技术社区，吸引技术人才。
+  \item 用可控制的平台达到安全和隐私的目标。
+\end{itemize}
+CERN是一个大的OpenStack用户，有15,000多个物理服务器和100PB数据量的集群通过OpenStack
+提供给CERN的研究员IT资源。CERN的Large Hadron Collider记录粒子碰撞粒子的数据，每次碰撞
+的数据量是1PB左右，然后需要处理集群分析并保存数据。通过OpenStack，研究员于自助的方式
+使用IT的资源，同时CERN的IT部门可以更高效的运营数据中心的资源。\cite{cern_user_story}
+
+\paragraph{OpenStack架构}
+\begin{figure}
+  \centering
+    \includegraphics[width=0.85\textwidth]{openstack-arch}
+    \caption{OpenStack核心组建的关系。源：OpenStack官方文档}
+  \label{fig:openstack-arch}
+\end{figure}
+OpenStack跟AWS的架构很类似，分开计算，存储，网络和其他服务到不同的独立的组建。
+在图\ref{fig:openstack-arch}可以看到OpenStack的核心组件和组件之间的关系。
+OpenStack的Identity(Keystone)服务提供租户和权力管理功能，所有组件以来
+Identity服务验证API请求是否有认证和权限。Compute(Nova)服务通过
+虚拟化或裸服务器提供计算资源。Networking(Neutron)服务给Compute服务
+提供网络资源的服务。Block Storage(Cinder)服务提供给Compute服务
+块存储，块存储可以理解为虚拟硬盘服务。Image(Glance)服务保存
+Compute服务的镜像，比如操作系统镜像或者用户传上的应用镜像。
+Object Storage(Swift)是OpenStack的对象存储，保存任何文件，
+Image服务可以配成用对象存储保存镜像的文件。Dashboard(Horizon)
+是为所有组建提供Web界面，调用各个组建的RESTful API。了解到核心组建与
+关系后，介绍计算，网络和存储组件的详细功能和实现方法。
+
+\begin{wrapfigure}{r}{0.40\textwidth}
+  \centering
+    \includegraphics[width=0.39\textwidth]{openstack-comp-arch}
+    \caption{OpenStack组建通用架构}
+  \label{fig:openstack-comp-arch}
+\end{wrapfigure}
+OpenStack的每个组建都遵循统一个架构。在图\ref{fig:openstack-comp-arch}可以看到通用的架构，
+每个组建有一个API层，负责提供对外的基于HTTP的RESTful API服务。如果API请求需要额外
+处理比如创建虚拟机，API层会传信息到Message Queue，让任一个代理服务接受信息并且处理。
+所有过程中需要，保存，更新或者删除持久的数据用到数据库。大部分组建也有一个Scheduler，
+负责调度资源，比如选最合适创建虚拟机的hypervisor。API层，Agents和Scheduler都可以
+横向扩展。
+
+Compute是OpenStack的计算资源服务。Compute自己不包含虚拟化的软件，但是
+它通过驱动方式抽象出来服务器资源。Compute目前支持的驱动包括Baremetal，KVM，Xen，
+Hyper-V，LXC，VMWare vSphere。Compute的KVM虚拟化驱动是在OpenStack社区测试的最好和最受欢迎的驱动。
+在2016的用户调查总计95\%的部署用KVM作为计算服务的技术选择。
+
+Networking是OpenStack的网络资源服务。Networking服务抽象出来网络资源，让OpenStack运营商选不同的
+网络技术实现Networking的服务。Networking是一个虚拟网络服务提供API让用户自己定义网络拓扑和管理IP地址，
+另外也提供路由器，负载均衡和其他3层以上的网络服务。Compute使用Networking的服务提供给服务器网络链接。
+Networking支持用OpenvSwitch，Linux Bridge和多个SDN厂家的技术。在2016的用户调查总计60\%的部署
+用开源的OpenvSwitch作为Neutron的驱动。OpenvSwtich也是OpenStack社区官方推荐和支持度最高的驱动。
+
+Block Storage是OpenStack的块存储服务。Block Storage服务抽象出来块存储的资源，OpenStack运营商可以选
+不同的Cinder驱动的技术实现块存储。用户可以通过Block Storage的API，创建和管理块设备。一个块设备可以
+理解为一个硬盘，硬盘可以从服务器拿走，插到其他服务器，通过Block Storage API一样可以操作块设备。
+Block Storage支持的驱动包含主流的商业NAS/SAN存储和开源的分布式存储。在2016年用户调查总计，Ceph的开源分布式
+排名第一，57\%部署使用Ceph作为Block Storage的后端存储。
+
+Object Storage是OpenStack的对象存储服务。Object Storage是一个完全独立的组建，用户可以直接用对象存储保存
+文件。用到的场景包含备份数据，大数据存储，应用数据(CSS，JS，图片等等）。
+
+
+
+\subsection{自动部署与配置管理现况}
 \label{subsec:automated_deployment}
+随着DevOps文化的发展，强调开发者（Dev）和运维人员（Ops）的沟通和合作达到
+同一目标，更快速，可靠，稳定发布和运营高质量的软件。达到目标通过自动化
+软件的开发，测试，部署和运维的流程，促进流程更可靠和频繁被执行。
+本章介绍DevOps常用的自动部署与配置管理工具，自动化运维和部署的流程。
 
-Introduce Ansible, Roles, Playbooks. Refer to Chapter
+如果没有自动化部署和配置，就造成可能在测试的时候部署与配置跟生产不一致，
+自动化了部署与配置后，可以一样部署在测试生产，也可以避免人为故障。
+在Linux最简单的方法自动化配置与安装是写Bash脚本，执行一系列的Linux命令。
+用Bash脚本很有限制，很难做成幂等的脚本，保证如果脚本被执行多次，
+执行后的结果每次都一样。对于可靠，稳定性能一模一样重复一个部署的环境很重要。
+另外用Bash脚本没有标准化，不同的人可能用完全不一样结构和写法。
+专门配置管理工具解决Bash脚本的问题，提供一个标准化幂等的自动部署工具。
+本章介绍Puppet和Ansible的开源配置管理软件。
 
-\subsection{基于大数据实现大规模机器视觉的研究现况}
-\label{subsec:bigdata_cv_background}
+
+\subsubsection{Puppet}
+既然IT运维人员维护的系统越来越多，强调运维自动化的重要性。
+手工当然无法扩展到大规模的集群。
+理想是有一个自动化系统，大家都可以用，而不是限于内部使用
+脚本。Puppet协助运维人员社区建立和共享成熟的工具，
+避免重复大家解决同一问题。Puppet以两种方式达到，第一
+Puppet提供一个框架简单化大部分运维人员的技术任务，第二
+用Puppet定义的语言可以容易分享和维护。
+Puppet是一个在2005年被Puppet Labs开发的，
+幂等和跨操作系统平台配置管理系统。\cite{puppet_docs}
+
+\begin{wrapfigure}{r}{0.40\textwidth}
+  \centering
+    \includegraphics[width=0.38\textwidth]{puppet-master-slave}
+    \caption{Puppet Master/Slave架构。\cite{puppet_docs}}
+  \label{fig:puppet-master-slave}
+\end{wrapfigure}
+Puppet最常用的架构是一个Master/Slave架构。所有Slave定期（默认每30分钟）
+从Master节点下载最新的配置，然后Slave保证本地配置跟从Master下载的配置是一致。
+Slave执行完了配置更新，报给Master是否更新了配置还是原来的配置已经一致。
+
+用Puppet自动化配置管理需要用Puppet基于Ruby定义的语言。Puppet语言的核心是
+使用Resources，语言其他方面主要用处为了更灵活和方便的使用Resources。
+一个Puppet Resource可能描述一个单独的系统包的状态或者文件的内容等等。
+多个Resource可以被组织成一个Class，比如描述怎么配置整个应用，多个配置文件
+，系统包等等。小的Class又可以被组织成一个更大的Class比如描述一个数据库服务角色。
+Node（节点或者服务器）要分配多个角色需要分配它多个Class。指定哪些Class分配
+到哪些Node叫Puppet的node classification。Puppet Modules（模块）是一种自我包含的包，
+带运维人员写的Puppet的Resources, Classes和文件，促进容易共享和标准化的结构。
+
+\subsubsection{Ansible}
+\label{subsubsec:ansible}
+Ansible跟Puppet一样是一个幂等的配置管理系统，简单化运维的自动化。跟Puppet主要区别在于架构和Ansible用YAML格式文件
+定义系统配置的状态。Ansible的架构没有用Master/Slave的架构，Ansible没有用agents，这样被Ansible管的节点都
+不需要装任何软件。Ansible通过高安全的SSH认真和访问被管理的节点。
+
+Ansible通过自带modules抽象常用的资源比如装系统包。
+Modules是在管理的节点被执行的部分，比如Ansible的apt module管理Debian/Ubuntu的包，用户可以通过apt模块指定
+哪些包得装上哪些包不能装上。除了Ansible自带的modules用户也可以加自己的module。
+
+Role是Ansible定义的目录结构，role目录下有tasks, handlers, templates, files, vars, defaults。Roles的
+tasks，handlers，vars，defaults目录下得有一个main.yaml文件。tasks描述需要执行的modules和它们参数。handlers
+描述发生时间可以被执行的任务，跟tasks很类似也是说明执行哪些modules和它们参数。
+templates目录下保存所有模板化的文件，比如可以提供参数的配置文件。Files目录下保存
+所有静态的文件，比如一些没有任何可调参数的配置文件。vars和defaults目录下的文件描述
+role可调的参数，用role的用户可以通过role暴露的参数定定制适合自己的需求。
+
+Ansible可以同时管理不同的基础设施环境。它通过inventory描述所有被管理的节点，
+执行ansible可以制定需要用哪个inventory文件部署。另外也支持从基础施舍云平台
+动态的获取所有节点用作inventory。inventory文件用ini格式，每个section表示一个
+server group(节点组)，section下每行表示一个被管理的节点。
+
+Ansible的playbook分配roles(角色）到在inventory里定义的节点组。用YAML格式描述
+每个服务器得装那些软件，服务和配置。
+
+%TODO: If time left provide a simple example
+
+
+\section{相关工作}
+\label{sec:related_work}
+
+\subsection{VMX Object Detection/Recognition System}
+Vision.ai公司的VMX产品是一个实时的物体检测和分类软件，可以通过web界面或者RESTful API使用。
+VMX提供的物体检测算法专注与速度和准确性。可以容易学习新的模型，将新的模型用来检测，分别，和
+跟踪图像或视频里的物体。VMX简单化机器视觉应用在生活中的应用。
+
+\subsection{CloudCV}
+CloudCV提供大规模分布式的机器视觉云服务。目标是开放给所有人机器视觉的领域，
+最先进的机器视觉算法不应该
+限于机器视觉到机器视觉，大数据和分布式系统开发的专家。CloudCV通过Web界面或者API
+方式提供最先进的机器视觉算法。整个系统是开源。\cite{cloudcv2015}
+
+\begin{wrapfigure}{r}{0.50\textwidth}
+  \centering
+    \includegraphics[width=0.49\textwidth]{cloudcv-architecture}
+    \caption{CloudCV系统架构。\cite{cloudcv2015}}
+  \label{fig:cloudcv-arch}
+\end{wrapfigure}
+在图\ref{fig:cloudcv-arch}可以看到CloudCV系统的架构。Web Servers基于Django的Web开发框架提供
+一个HTTP API和界面。API暴露的接口有，图片分类，DeCAF特征抽取，找出图像最重要人，
+Image Stitcing。数据保存到一个NFS（Linux Network File System)服务器。
+在任务调度，CloudCV使用Python的Celery框架，选定在哪个节点得跑具体的任务。
+它们通过不同的queue可以调度任务到不同的节点组。按任务类型分Queue，这样可以调度需要GPU的任务
+到有GPU的节点。所以计算节点连到信息队列收到该执行的任务。计算节点使用AWS，Azure和Virginia内部
+云平台提供基础施舍资源。机器视觉任务主要基于Caffe和OpenCV实现。
+
+\subsection{结论}
+VMX和CloudCV都是简单化机器视觉的使用。VMX是一个专有软件，CloudCV是一个开源软件。
+两个系统都缺乏一个研究员的场景，研究员自己的应用和定制的算法大规模执行。CloudCV和VMX主要针对
+用一些他们包装好的算法但是没有提供一个可以执行自己的机器视觉应用的平台。另外也没有提供
+大数据存储的能力，现实生活中的数据集越来越大，需要一个分布式存储保存。CloudCV用到的NFS无法
+扩展到大规模使用。
 
 \section{问题与挑战}
 \label{sec:challenges}
+大数据时代给机器视觉带来新的问题与挑战。
+每天互联网社交网站或
+城市里的监控头像都拍摄大量的数据。
+需要新的 方法处理大量的图像和视频数据。
+CloudVision面对 的问题与挑战有：
+\begin{itemize}
+  \item 扩展性 \\
+        机器视觉最大挑战是扩展性，为了能够处理和保存海量数据，单个服务器资源不够。
+        因此需要大量的服务器连在一起，并行执行机器视觉的算法在多个服务器。但是多数机构
+        没有足够或者不符合需求的基础施舍，带来基础施舍可用性的挑战。算法需要分布式在集群执行，
+        带来并行化的挑战。集群也需要部署，维护和管理，这带来运维的负担。
+  \item 基础施舍可用性 \\
+        基础施舍可用性的挑战来自规模和特性。多大大学和研究机构，没有大的数据中心专门给研究使用。
+        最先进的基于深度学习算法使用大量的CPU或者GPU集群\cite{googlenet2015, google2015rethinking, baidup2015deepgpu}。
+        Baidu研究用了一个定制的超计算机，里面有34个服务器，每台有两块6核Intel Xeon E5-2620，4个
+        Nvidia Tesla K40m GPU，用低延迟的InfiniBand组成一个408个CPU核和136个GPU集群。Baidu研究用了这个集群
+        通过数据增强训练机器学习的模型，达到了最先进的结果。\cite{baidup2015deepgpu}
+        通过分写最近的论文可以分析到基础施舍的重要性，Baidu已经有大的数据中心和基础施舍设计的专家，
+        但是大学或者研究机构的预算和基础施舍的专家一般少。
+  \item 并行化 \\
+        通过并行化可以解决扩展性的挑战，但是写并行化的程序也是一个挑战。写并行化的程序得考虑
+        很多方面，数据转播，怎么分任务并行执行等等。
+  \item 运维负担 \\
+        部署，维护和管理需要一定的运维能力和投资。大的集群超过1000个服务器，需要自动化的运维。
+        得有运维专家专门运维处理集群，了解具体的软件和基础施舍。
+  \item 易用性 \\
+        目前的主流软件比如OpenCV都需要用户自己安装和部署，解决依赖关系问题等等。这个是一个障碍。
+        另外如果要在集群方式配置OpenCV在每个服务器更加难度。
+  \item 可重用性 \\
+        机器视觉的研究员经常需在原有的算法做改进或者研究新的算法。他们需要对比新的算法跟目前主流算法，
+        正确性，计算时间等等。目前经常需要重新实现原有的算法，浪费大家的时间，因此需要提高可重用性。
+  \item 高性能 \\
+        高性能挑战主要考虑计算时间和计算的瓶颈，比如集群里的数据传速，硬盘IO等等。
+\end{itemize}
+
 
 \section{本文主要工作在与结构安排}
 \label{sec:main_work}

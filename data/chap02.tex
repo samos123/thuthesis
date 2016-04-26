@@ -1,15 +1,17 @@
 \chapter{CloudVision架构与设计}
 \label{cha:architecture}
+本章描述CloudVision机器视觉云平台的架构，说明怎么解决在\ref{sec:challenges}
+描述的挑战。
 在图\ref{fig:cloudvision-arch}可以看到CloudVision的架构主要分成两部分:
 控制与管理层和业务与处理层。用户可以通过Web UI，CLI或者API使用
-CloudVision的服务。 控制层提供对外的服务然后业务层负责在大数据平台
-处理任务。控制与管理层和业务与处理层之间
+CloudVision的服务。 控制层提供对外的API和Web服务和管理业务集群。业务层
+负责执行机器视觉的任务。控制与管理层和业务与处理层之间
 基于一个消息队列转达任务和信息。通过分开控制层和处理层我们可以
 独立扩展两部分，也保持它们独立性。如果处理性能不足可以
 增加处理层的服务器。
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.58\textwidth]{cloudvision-arch}
+  \includegraphics[width=0.55\textwidth]{cloudvision-arch}
   \caption{CloudVision 总体架构}
   \label{fig:cloudvision-arch}
 \end{figure}
@@ -239,7 +241,7 @@ Deploy的时候会动态生产集群的Ansible Inventory和Playbook。
 云平台提供对象存储服务（Object Storage）保存长久数据比如数据集和处理结果。
 
 处理层需要高性能，高可靠，易用和可扩展性因此CloudVision
-选择使用Spark的成熟的大数据分布式处理平台。在Spark里可以调用Caffe和OpenCV软件。
+选择使用Spark的成熟的大数据分布式处理平台。在处理集群里可以直接调用Caffe和OpenCV软件。
 为了提高高性能选了Alluxio的内存分布式存储提供
 处理集群里的高性能零时存储。Alluxio可以缓存云平台的对象存储(Object Storage)另外
 也可以保存处理任务之间的中间结果。
@@ -322,9 +324,13 @@ Spark的架构是一个高可用架构，主节点和计算节点都是高可用
 \section{基础设施层}
 \label{sec:arch_infra}
 CloudVision让用户不需要关心基础施舍层的设计和管理。
-CloudVision为用户使用最佳的做法设计了基础施舍的架构。
-在网络层，用户可以容易访问需要访问的资源但是同时不需要访问
-的资源它无法访问。在CloudVision服务器按不同的角色分成不同的组。
+CloudVision为用户设计好了整体的基础施舍架构。设计考虑到
+扩展性，弹性，安全性，易用性，高性能，和运维负担。
+
+
+\subsection{网络设计}
+在网络层，保证用户可以容易访问访问他的资源同时保证安全性，不该访问的资源
+无法访问。在CloudVision服务器按不同的角色分成不同的组。
 
 在图\ref{fig:cloudvision-infra}可以看到CloudVision的基础施舍架构图。
 左边有控制与管理层的集群的资源。控制与管理集群
@@ -347,17 +353,10 @@ SSH服务。这样控制节点可以通过SSH公钥和私钥安全的控制整�
 通过只提供主节点的接口我们保护其他节点直接从外面能访问。这里
 用到的云平台的网络隔离功能。
 
+\subsection{服务器配置}
 
 
-\section{架构对比和实验}
-\label{sec:arch_experiment}
 
-Horizontal scaling
-
-Difference between Alluxio and no Alluxio
-业务与处理架构对比
-
-difference between reading from disk with opencv and using memory strings directly
 
 
 \section{架构结论}
