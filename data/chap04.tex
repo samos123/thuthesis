@@ -1,13 +1,42 @@
 \chapter{CloudVision - 机器视觉云平台实验}
 \label{cha:cloudvision_experiment}
+为了证证明架构的横向扩展性和提高性能的内存缓存，本章描述
+两个实验：横向扩展性实验和内存缓存性能对比实验。
+所有实验基础施舍使用清华软件学院的信息系统与工程研究所OpenStack私有云，
+具体用到的计算资源每个实验单独描述。持久存储使用研究所的OpenStack Swift
+对象存储。
 
 
 \section{横向扩展性实验}
+\label{sec:scalability-experiment}
+这个实验的目标是了解到CloudVision云平台不同功能的扩展性。通过增加业务与处理层的计算节点，
+应该能看到一个线性的运行时间的减少。本实验使用了Caltech-256的数据集，里面
+有30607图片和256个类别，总体数据大小是1.2GB。
+
+扩展性实验分析\ref{subsec:sift-scalability} SIFT特征抽取扩展性和\ref{subsec:classifier-scalability}
+分类器的分类过程扩展性。两个实验同样从1台计算节点增加到6台计算节点，分析计算时间。
+每台计算服务器使用m1.large的配置，4 x vCPU，8GB内存，80GB本地硬盘。所有虚拟机共享一个
+1Gbps私有网络。
+
+\subsection{SIFT特征抽取扩展性实验}
+\label{subsec:sift-scalability}
+这个实验分析CloudVision实现的分布式SIFT特征抽取扩展性能力。
+首先为实验把Caltech-256的数据集做成一个1.2G的SequenceFile保存
+到OpenStack Swift对象存储。然后执行在\ref{sec:feature-extraction}描述CloudVision SIFT特征抽取实现，
+保存SIFT特征到集群里内存缓存。
+
 Increasing datasize and increasing workers
 
 
-\section{内存缓存实验}
-With and without Alluxio
+\subsection{分类器训练扩展性实验}
+\label{subsec:classifier-scalability}
+
+
+
+\section{内存缓存性能对比实验}
+\label{sec:memory-cache-experiment}
+Features to FeaturesBoW with and without Alluxio
+With and without Alluxio whole pipline from SIFT to BoW with dictionary learning
 
 How CloudVision matches NIST definition of PaaS. 
 Usage of cloud storage and cloud apis

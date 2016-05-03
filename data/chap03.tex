@@ -310,28 +310,82 @@ Spark的MLlib已经包括一个binary(single class) SVM分布式分类器实现�
         需要分布式预处理特征BoW表示数据。
 \end{itemize}
 
-CloudVision分类器使用Scala实现，因为需要扩展MLlib原有的机器学习方法，
-用Scala可以容易和高效扩展Spark核心功能。
-在本章\ref{subsec:classifier-preprocessing}描述特征BoW表示预处理的过程实现方法，
-解决需要符合MLlib格式数据的问题。然后在\ref{subsec:classifier-training}和
-\ref{subsec:classifier-label}描述基于Spark
-MLlib的多级类SVM分类器训练和分类过程的实现。
+CloudVision分类器使用Scala实现，因为Scala可以更紧密的扩展MLlib原有的机器学习方法。
+为了训练分类器先需要预处理数据，在本章\ref{subsec:classifier-preprocessing}描述CloudVision分类器预处理数据(preprocessing)的实现方法，
+解决需要符合Spark MLlib格式数据的问题。然后在\ref{subsec:classifier-training}介绍基于处理好的训练数据训练多类别分布式SVM训练实现方法。
+在图\ref{fig:cloudvision-classifier}可以看到预处理和多类别SVM的实现方式。
+训练完了可以用多类别的SVM模型分类无知类别的数据，在\ref{subsec:classifier-label}描述CloudVision多类别SVM分类的实现。
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=0.60\textwidth]{cloudvision-classifier}
+  \caption{CloudVision预处理和训练分类器实现}
+  \label{fig:cloudvision-classifier}
+\end{figure}
+
 
 
 \subsection{数据预处理}
 \label{subsec:classifier-preprocessing}
-预处理使用图像文件名字得到图像的类型ID。比如在Caltech-256数据集
-每个图像文件名的格式是\{classid\}\_\{imgid\}.jpg，这样可以通过一个
-regex(正则表达式)从文件名找出类型，在Caltech256可以用这个正则表达式\verb|(\d+)_\d+.jpg|
+数据预处理需要从数据集获取类别ID和特征表示，组成一个Spark的LabeledPoint。
+Spark的LabeledPoint格式需要两个变量：类别ID(label)和特征向量(features)。
+类别ID的变量数据类型是Double，必须从零开始算每个整数表述一个独立的类别。
+特征向量变量的数据类型是Spark的org.apache.spark.mllib.linalg.Vector。
+
+从数据集获取类别ID，在多数数据集可以使用图像文件名字，
+比如在Caltech-256数据集每个图像文件名的格式是\{classid\}\_\{imgid\}.jpg，
+这样可以通过一个regex(正则表达式)从文件名找出类型，
+在Caltech256可以用这个正则表达式\verb|(\d+)_\d+.jpg|
 取出类型ID。
 
+在图\ref{fig:cloudvision-classifier}可以看到预处理实现方式，
+先从Hadoop兼容文件系统读取BoW特征向量和文件名字的DataFrame。
+然后通过一个分布式map操作，用上面描述的方式把文件名字和BoW变成
+一个RDD of LabeledPoint。
 
 
 
 \subsection{训练}
 \label{subsec:classifier-training}
-SVM
+训练多类别的SVM分类器方法是每个类别独立训练一个二类分类器。
+假设有$N$个类别，那需要训练$1..N$个二类（binary）SVM分类器。
+在训练第$i$个列别的时候，先需要把数据集里所有不等于$i$的类别设置为$0$，
+然后将数据集里所有等于$i$的列别设置为$1$。这样我们把问题变成一个
+普通的二类SVM分类器问题。在图\ref{fig:cloudvision-classifier}可以但到最后部分训练的过程。
+在Listing \ref{lst:classifier-training}是用pseudocode描述实现方式。
+\begin{lstlisting}[language=Python,
+                   basicstyle=\small,
+                   numbers=left,
+                   showstringspaces=false,
+                   caption={SVM多类别分类器训练pseudocode},
+                   label={lst:classifier-training}]
+svm_classifiers = []
+for classid in classes:
+    binary_label_features = features_bow.map(to_binary_label)
+    svm_classifiers.append(SVMWithSGD.train(binary_label_features))
+\end{lstlisting}
+
+
 
 \subsection{分类}
 \label{subsec:classifier-label}
+分类过程把无知类别的数据填上类别。多类别SVM分类器，使用$N$个类别的二类分类器
+，这$N$个分类器是基于\ref{subsec:classifier-training}训练的，
+$N$个列别的分类器中得分最高的分类器是预测到的类别。
+\begin{lstlisting}[language=Python,
+                   basicstyle=\small,
+                   numbers=left,
+                   showstringspaces=false,
+                   caption={SVM多类别分类器分类pseudocode},
+                   label={lst:classifier-training}]
+scores = []
+for classifier in svm_classifiers:
+    score, classid = classifier.predict(features_bow)
+    scores.append( (score, classid) )
+
+return scores.sortByScore.getFirst.getClassid
+\end{lstlisting}
+
+
+
 
