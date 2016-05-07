@@ -14,12 +14,12 @@
   %=========
   % 中文信息
   %=========
-  ctitle={CloudVision - 分布式的大规模机器视觉云平台},
+  ctitle={分布式大规模机器视觉云平台设计与实现},
   cdegree={工学硕士},
   cdepartment={软件工程系},
   cmajor={软件工程},
-  cauthor={Sam Stoelinga(林海洋)},
-  csupervisor={丁贵光副教授},
+  cauthor={Sam Stoelinga},
+  csupervisor={丁贵广副教授},
   %cassosupervisor={陈文光教授}, % 副指导老师
   %ccosupervisor={某某某教授}, % 联合指导老师
   % 日期自动使用当前时间，若需指定按如下方式修改：
@@ -72,8 +72,17 @@
     因此，当前计算机视觉研究人员不但需要研究算法问题，还需要充分掌握分布式编程，
     基础设施和大数据处理相关知识，才能高效地将算法应用于海量数据，以达到最好的结果。
     同时，计算机视觉中的基础步骤，如特征提取，字典学习，特征转码等具有重复性，占用了研究者的大量时间和精力。
-    本文提出CloudVsion云平台，一方面实现了大数据处理基础架构，为研究人员提供一个稳定，易用的分布式计算平台，
+    本文提出CloudVision云平台，一方面实现了大数据处理基础架构，为研究人员提供一个稳定，易用的分布式计算平台，
     另一方面提供了常用的机器视觉库，提高研究的效率和准确率。
+
+    CloudVision 采用了垂直，可伸缩性的架构，可以适应数据的持续增长。
+    在数据存储方面，采用HCFS存储图片，视频以及中间处理结果。在计算方面，
+    采用Spark分布式系统在内存中高效地对数据进行计算。基于分布式的存储和
+    计算环境，CloudVision还实现了OpenCV计算机视觉处理库，使得OpenCV可以
+    高效地处理海量数据。最后，CloudVision在部署上，
+    采用了OpenStack和puppet相关技术，使得系统可以通过增加节点横向扩展处
+    理能力。
+
 
 \end{cabstract}
 
@@ -96,11 +105,11 @@
     meet the demands of large and increasing datasets. Hadoop Distributed File System(HDFS)
     or Hadoop Compatible File Systems(HCFS) can be used as the peristent storage layer for images, videos
     and representations. Spark is used for efficient distributed computing
-    with a large set of existing libraries, that can be used in computer vision. OpenCV and Caffe
-    are run on top of Spark to provide a large library of existing computer vision algorithms
+    with a large set of existing libraries, that can be used in computer vision. OpenCV is
+    run on top of Spark to provide a large library of existing computer vision algorithms
     out of the box.
 
-    In general computer vision software such as OpenCV and Caffe requires strong
+    In general computer vision software and distributed systems such as Hadoop, Spark, OpenCV and VLFeat requires strong
     infrastructure and software deployment expertise. CloudVision removes this barrier by
     providing the platform as a service and by automating the deployment of CloudVision
     itself. CloudVision supports automated provisioning and deployment to OpenStack and AWS

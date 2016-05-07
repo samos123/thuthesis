@@ -163,7 +163,7 @@ DataSource是管理常用的一些数据集。可以通过InputLocation作为任
 
 \subsection{云平台管理}
 \label{subsec:api-worker-cloud}
-云平台管理模块是一种API Worker，基于Celery和任务队列可以异步执行基础施舍云资源相关的任务。
+云平台管理模块是一种API Worker，基于Celery和任务队列可以异步执行基础设施云资源相关的任务。
 云平台管理模块负责： 验证用户提供的云平台信息是否正确，
 在云平台里创建新的服务器，在云平台里删除服务器，
 管理云平台的网络资源。
@@ -252,7 +252,7 @@ Deploy的时候会动态生产集群的Ansible Inventory和Playbook。
   \label{fig:cloudvision-arch-processing}
 \end{figure}
 
-\subsection{易用}
+\subsection{易用性}
 提供给机器视觉的研究员需要强调易用性。研究员经常专注在研究算法但是在集群维护和部署
 会却经验。CloudVision的处理层让研究员更容易的写大规模的机器视觉任务：
 \begin{itemize}
@@ -277,7 +277,7 @@ Deploy的时候会动态生产集群的Ansible Inventory和Playbook。
 \end{itemize}
 
 
-\subsection{高可靠}
+\subsection{高可靠性}
 Spark的架构是一个高可用架构，主节点和计算节点都是高可用。在章
 \ref{subsubsec:spark}详细介绍Spark讲到Spark主节点可以通过Zookeeper
 达到高可用，Spark计算节点通过RRD分布重新计算可以达到高可用。
@@ -323,8 +323,8 @@ Spark的架构是一个高可用架构，主节点和计算节点都是高可用
 
 \section{基础设施层}
 \label{sec:arch_infra}
-CloudVision让用户不需要关心基础施舍层的设计和管理。
-CloudVision为用户设计好了整体的基础施舍架构。设计考虑到
+CloudVision让用户不需要关心基础设施层的设计和管理。
+CloudVision为用户设计好了整体的基础设施架构。设计考虑到
 扩展性，弹性，安全性，易用性，高性能，和运维负担。
 
 
@@ -332,7 +332,7 @@ CloudVision为用户设计好了整体的基础施舍架构。设计考虑到
 在网络层，保证用户可以容易访问访问他的资源同时保证安全性，不该访问的资源
 无法访问。在CloudVision服务器按不同的角色分成不同的组。
 
-在图\ref{fig:cloudvision-infra}可以看到CloudVision的基础施舍架构图。
+在图\ref{fig:cloudvision-infra}可以看到CloudVision的基础设施架构图。
 左边有控制与管理层的集群的资源。控制与管理集群
 定义物种类型服务器API Web Servers，MongoDB Servers，
 RabbitMQ Servers， API Workers。所有控制与管理服务器类型
@@ -341,7 +341,7 @@ API Web Servers的负载均衡器。
 \begin{figure}[h]
   \centering
     \includegraphics[width=0.99\textwidth]{cloudvision-infra}
-  \caption{CloudVision 基础施舍架构}
+  \caption{CloudVision 基础设施架构}
   \label{fig:cloudvision-infra}
 \end{figure}
 
@@ -353,10 +353,3 @@ SSH服务。这样控制节点可以通过SSH公钥和私钥安全的控制整�
 通过只提供主节点的接口我们保护其他节点直接从外面能访问。这里
 用到的云平台的网络隔离功能。
 
-\subsection{服务器配置}
-
-
-
-
-
-\section{架构结论}

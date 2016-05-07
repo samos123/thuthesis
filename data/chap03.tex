@@ -1,32 +1,74 @@
-\chapter{分布式机器视觉库}
+\chapter{CloudVision分布式机器视觉库}
 \label{cha:distributed_vision_library}
-本章介绍CloudVision目前自带的分布式机器视觉的算法和它实现方式，这些算法作为CloudVision的核心分布式机器视觉库。
-可以让其他用户重用在实验对比或者改进原有的机器视觉算法。同时机器视觉库证明CloudVision平台合适写分布式的机器视觉算法。
+本章介绍CloudVision实现的分布式机器视觉的算法，
+这些算法作为CloudVision的核心分布式机器视觉算法库。
+用户可以通过CloudVision的控制与管理层，直接提交
+器视觉库的任务。另外机器视觉库作为一个参考实现，让
+用户更深了解怎么写自己的CloudVision分布式机器视觉的程序。
+
 \begin{figure}[h]
   \centering
     \includegraphics[width=0.99\textwidth]{computer-vision-library}
   \caption{CloudVision分布式机器视觉库实现的阶段}
   \label{fig:computer-vision-library}
 \end{figure}
-在图\ref{fig:computer-vision-library}描述在CloudVision机器视觉库实现的阶段，每个阶段
-会单独介绍实现的算法和方法。
-本章首先介绍\ref{sec:storage_format}存储结构，描述预处理的过程从大量图像转换合适于在大数据平台处理的结构，
-了解到在大数据平台怎么解决大数据少文件的问题。
-在章\ref{sec:feature-extraction}介绍机器视觉库的特征抽取实现，怎么在Spark高效执行OpenCV的SIFT特征抽取方法，然后保存特征到
-在数据结构介绍的Parquet文件。
-在章\ref{sec:image-representation}
+在图\ref{fig:computer-vision-library}描述在CloudVision机器视觉库实现的阶段，首先需要
+在数据集做预处理，然后在处理好的数据抽取特征，然后从特征描述子转码成图像表示，最后用图像表示
+和分类器分类数据。
+先介在章\ref{sec:storage_format}介绍所有算法用到的存储结构，
+了解到预处理的做法和结构怎么解决在大数据平台大量小文件问题。
+在章\ref{sec:feature-extraction}介绍分布式特征抽取算法的实现，
+介绍CloudVision提出的高效执行OpenCV的SIFT特征抽取方法。
+在章\ref{sec:image-representation}介绍分布式的词典学习和
+图像表示实现。
+在章\ref{sec:cloudvision_classifier}介绍分布式的SVM分类器，训练
+和分类实现。
 
 
 \section{存储结构}
 \label{sec:storage_format}
-在大数据存储比如HDFS和对象存储高效批量处理小文件是一个问题。
-这里定义小文见是文件大小小于大数据存储的block size。Hadoop
-HDFS默认定义的block size是128MB。Swift和S3对象存储默认
-block size是32MB。图片大小一般是10KB - 200KB。
-如果直接保存图片，每个图片是一个独立的文件会
-造成处理的时候得每个图片单独读取，发多个请求。
-另外处理的时候Spark和Hadoop Map/Reduce也
-无法同时处理多个图片在同一个任务。
+CloudVision里面的程序经常需要读写数据集，中间结果和最终结果。
+为了统一化数据结果，CloudVision机器视觉库提出一个通用合适
+于大数据平台的数据结构。在分布式存储面对一个问题怎么
+高效读写图像数据，在章\ref{subsec:big-data-small-files}我们详细
+描述该问题同时提出两个解决方法。
+在章\ref{subsec:seq-file}详细介绍第一个方法，用Hadoop SequenceFile
+保存大量图像文件。在章\ref{subsec:parquet}介绍一个数据格式
+合适存算法的中间结果。
+
+
+\subsection{大数据大量小文件问题}
+\label{subsec:big-data-small-files}
+机器视觉数据集包括大量的图像，每个图像文件一般在10KB到200KB以内，
+直接存这些图像文件到HDFS或者Hadoop兼容文件系统存在性能和易用问题。
+回顾到章\ref{subsubsec:hdfs}的HDFS介绍，Hadoop存储方式把文件分成blocks，将每个
+block复制到多个datanode，默认的Block大小是128MB。如果
+直接保存图像文件到HDFS会造成，每个文件分成一个block，
+而且这个block没满。很多没满的block造成两个的问题：
+\begin{enumerate}
+  \item HDFS的Namenode内存容易满
+
+        HDFS保存所有文件的元数据在Namenode的内存。如果保存海量
+        文件会造成Namnode内存用满。采用S3或者Swift对象存储没有
+        这个问题。
+
+  \item 处理时候IO性能问题
+        
+        MapReduce和Spark的任务，读数据的时候会通过一次IO请求
+        读取一个block，将整个block执行用户提供map函数。如果
+        每个block数据小，但是block很多，需要做大量的IO请求。
+        HDFS和大部分对象存储的延迟比较高，每次如果
+\end{enumerate}
+
+
+%在大数据存储比如HDFS和对象存储高效批量处理小文件是一个问题。
+%这里定义小文见是文件大小小于大数据存储的block size。Hadoop
+%HDFS默认定义的block size是128MB。Swift和S3对象存储默认
+%block size是32MB。图片大小一般是10KB - 200KB。
+%如果直接保存图片，每个图片是一个独立的文件会
+%造成处理的时候得每个图片单独读取，发多个请求。
+%另外处理的时候Spark和Hadoop Map/Reduce也
+%无法同时处理多个图片在同一个任务。
 
 目前在CloudVision通过两个方式解决高性能
 批量处理小文件的问题：使用SequenceFiles和
@@ -35,6 +77,7 @@ Apache Parquet的存储格式和方式。在CloudVision我们用SequenceFile作�
 
 
 \subsection{基于SequenceFile存储大量图片}
+\label{subsec:seq-file}
 Hadoop的SequenceFile格式可以保存Key/Value对。
 CloudVision使用SequenceFile保存大量的图片，Key是一个
 string用来保存图片文件名字，Value是一个Array[Bytes]用来保存
@@ -85,6 +128,7 @@ Spark会自动把Key,Value Pairs做成一个RDD。在章\ref{sec:feature-extract
 会有详细的例子使用图片的SequenceFile抽取特征。
 
 \subsection{基于Parquet通用数据结构}
+\label{subsec:parquet}
 Parquet是提供一个通用的数据列式存储。列式存储
 按列保存数据，特别合适在批量处理使用。CloudVision
 主要用Parquet来保存所有处理的结果，比如从图片抽取的
@@ -112,13 +156,9 @@ Parquet是提供一个通用的数据列式存储。列式存储
 \label{sec:feature-extraction}
 在章\ref{intro:image_features}我们介绍了主流的特征，了解到SIFT还是最常用的人工特征，
 但是基于CNN的特征现在能达到最先进的结果。为了支持人工特征的研究和新的深度学习特征
-的研究，CloudVision目前支持SIFT，SURF和CNN的特征。先介在\ref{subsec:spark_opencv}
-绍基于Spark调用OpenCV抽取人工特征
-方法，然后在\ref{subsec:caffe_cnn}介绍基于Caffe抽取CNN的特征。
+的研究，CloudVision目前支持SIFT和SURF的特征，在后续工作计划也会支持CNN。
 
-\subsection{在Spark基于OpenCV抽取特征}
-\label{subsec:spark_opencv}
-在CloudVision我们用Spark和OpenCV分布式抽取主流的人工特征(SIFT, SURF)。OpenCV除了抽特征也提供很多
+我们用Spark和OpenCV分布式抽取主流的人工特征(SIFT, SURF)。OpenCV除了抽特征也提供很多
 其他图像处理的功能，同样可以基于Spark分布式用这些OpenCV的功能。之前在网上检查的时候没有人在Spark用OpenCV抽取特征，
 可能是因为面对了几个难点。CloudVision解决这些问题：
 \begin{itemize}
@@ -187,22 +227,18 @@ p = max(c * 3, \frac{s}{32})
 如果数据集小，会按照CPU核数推荐partition数，在数据集大但是CPU核数小的情况还是保证每个partition不会大于32MB。
 
 
-\subsection{基于Caffe抽取CNN特征}
-\label{subsec:caffe_cnn}
-Learned Features CNN, use Caffe extract features on Spark
-
 
 \section{特征编码与图像表示}
 \label{sec:image-representation}
-在章\ref{subsubsec:feature-encoding}我们介绍了BoW, Fisher Vector和VLAD的特征转吗与图像表示的方法。
-介绍的特装转吗与图像表示方法同样都有一个Visual Dictionary（词典）学习过程，BoW使用KMeans学习，
+在章\ref{subsubsec:feature-encoding}我们介绍了BoW, Fisher Vector和VLAD的特征转码与图像表示的方法。
+介绍的特装转码与图像表示方法同样都有一个Visual Dictionary（词典）学习过程，BoW使用KMeans学习，
 Fisher Vector使用Gausian Mixture Model(GMM)学习，VLAD可以选使用KMeans或者GMM学习。
-学习词典后，用词典分配每个特征描述子的点到一个codeword（码字），这过程叫Feature Encoding（特征转吗），然后通过
+学习词典后，用词典分配每个特征描述子的点到一个codeword（码字），这过程叫Feature Encoding（特征转码），然后通过
 pooling把所有点计算在一起得到一个图像表示。
 
-为了演示特征编码与图像表示过程，CloudVision实现了BoW + Sum pooling的特征转吗与图像表示，
+为了演示特征编码与图像表示过程，CloudVision实现了BoW + Sum pooling的特征转码与图像表示，
 主要原因其他方法是基于BoW的改进而且实现相对复杂。在章\ref{subsec:dict-learning}介绍CloudVision
-BoW词典学习的实现方法，然后在章\ref{subsec:feature-encoding}介绍CloudVision的BoW特征转吗与pooling
+BoW词典学习的实现方法，然后在章\ref{subsec:feature-encoding}介绍CloudVision的BoW特征转码与pooling
 实现方法。
 
 \subsection{词典学习}
@@ -238,34 +274,34 @@ model.save(sc, kmeans_model_path)
 通过flatMap转换一样大小响亮解决第二个问题。
 
 
-\subsection{特征转吗与pooling}
+\subsection{特征转码与pooling}
 \label{subsec:feature-encoding}
-学了词典以后我们可以用它把图像的特征转吗成最终图像表示。
-CloudVision目前实现了最简单的基于BoW特征转吗然后用Sum pooling作出直方图。
+学了词典以后我们可以用它把图像的特征转码成最终图像表示。
+CloudVision目前实现了最简单的基于BoW特征转码然后用Sum pooling作出直方图。
 这个过程把每个特征关键点的描述子分配到字典里的一个码字，
 然后通过sum pooling统计一个1 x $K$个向量叫BoW图像表示。
 BoW表示向量指数表示第$K$个码字在图像出现了多少次，
 BoW表示是码字的直方图。
 
-在CloudVision的特征转吗与pooling面对了一个值得提的问题，
-如果分布式在每个Spark executor执行特征转吗都需要同一个字典，
+在CloudVision的特征转码与pooling面对了一个值得提的问题，
+如果分布式在每个Spark executor执行特征转码都需要同一个字典，
 这个词典每次从Hadoop兼容文件系统读取变成了一个IO性能瓶颈。
-下面介绍CloudVision特征转吗用到Spark的broadcast功能解决此问题。
+下面介绍CloudVision特征转码用到Spark的broadcast功能解决此问题。
 
 
 \begin{figure}[h]
   \centering
     \includegraphics[width=0.66\textwidth]{cloudvision-feature-encoding}
-  \caption{CloudVision在Spark集群实现BoW特征转吗与表示。}
+  \caption{CloudVision在Spark集群实现BoW特征转码与表示。}
   \label{fig:cloudvision-feature-encoding}
 \end{figure}
 在图\ref{fig:cloudvision-feature-encoding}可以看到基于Spark分布式方式
-实现特征转吗与表示。第一步从Hadoop兼容存储读取Parquet格式的图像的特征和KMeans model，这里KMeans model
-是在章\ref{subsec:dict-learning}学习的词典(Visual Codebook)。因为每个执行特征转吗的Spark Executor都需要
+实现特征转码与表示。第一步从Hadoop兼容存储读取Parquet格式的图像的特征和KMeans model，这里KMeans model
+是在章\ref{subsec:dict-learning}学习的词典(Visual Codebook)。因为每个执行特征转码的Spark Executor都需要
 用这个词典，我们一次性通过Spark Broadcast变量把词典提前播放的每个Spark Executor的内存，避免每个节点单独从Hadoop
 兼容文件系统读取词典。\cite{spark-programming-guide}
 
-有了词典可以高效分布式执行特征转吗过程，使用Spark分布式map操作执行
+有了词典可以高效分布式执行特征转码过程，使用Spark分布式map操作执行
 BoW表示函数，BoW函数把每个图像特征矩阵变成一个1 x $K$个响亮表示码字的直方图。
 在Listing \ref{lst:feature-encoding}可以看到BoW函数核心代码。
 第一行建立Spark KMeansModel。第二行建立一个1 x $K$的向量用来保存BoW表示。
@@ -276,7 +312,7 @@ BoW表示函数，BoW函数把每个图像特征矩阵变成一个1 x $K$个响�
                    basicstyle=\small,
                    numbers=left,
                    showstringspaces=false,
-                   caption={BoW特征转吗核心代码},
+                   caption={BoW特征转码核心代码},
                    label={lst:feature-encoding}]
 model = KMeansModel(dictionary)
 bow = np.zeros(len(dictionary))
