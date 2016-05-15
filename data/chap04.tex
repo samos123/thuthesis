@@ -165,64 +165,95 @@ SIFT的局部特征算法有两部分，特征关键点检测和特征描述子�
 在自己实现过程也碰到了几个问题，可能这些问题造成晚上几乎没材料。
 从Spark调用OpenCV面对的问题：
 \begin{itemize}
-  \item 从Spark调用OpenCV问题 \\
+  \item 从Spark调用OpenCV问题
+
         Spark提供Java，Scala和Python的language bindings。OpenCV提供C++，Java和Python的API。
-        需要保证Spark的每个计算节点能够调用相应的OpenCV接口。另外发现Java的接口不全，没有提供
-        SIFT特征抽取的接口。
-  \item 从SequenceFile高效读取图像到OpenCV需要格式的问题 \\
+        需要保证Spark的每个计算节点能够调用相应的OpenCV接口。在实现过程中我们发现Java的接口不全，
+        OpenCV-contrib没有相应的Java接口，因此如果用Java没有提供SIFT特征抽取的接口。OpenCV官方
+        在Github确认了存在这个问题。
+  \item 从SequenceFile高效读取图像到OpenCV需要格式的问题
+
         OpenCV一般从一个文件目录读取图像，在大数据结构所有图像在SequenceFile里面，读的时候直接把图像读到内存。
         在网上的方式都先把图像写到一个暂时的文件然后从暂时文件读到OpenCV的图像Image class，但是这个方式带来Disk IO的平静。
         我们需要高效从大数据数据结构读取图像到内存，将在内存里的图像直接用OpenCV抽取特征。
-  \item Spark的单任务开销 \\
+  \item Spark的单任务开销
+
         每个Spark任务有开销，因此如果每个任务运行时间很段，这开销会显著，造成一个性能问题。
 \end{itemize}
 
+\subsection*{算法实现}
+机器视觉库分布式SIFT和SURF特征抽取实，通过Spark分布式并行执行OpenCV的SIFT算法实现。
+分布式实现细节如下：
+\begin{itemize}
+  \item 输入和参数
 
-\begin{figure}[h]
-  \centering
-    \includegraphics[width=0.66\textwidth]{cloudvision-feature-extraction}
-  \caption{CloudVision在Spark集群特征抽取的方式。}
-  \label{fig:cloudvision-feature-extraction}
-\end{figure}
-通过描述CloudVision具体的基于Spark和OpenCV特征抽取方式，说明CloudVision怎么解决上面定义的问题。
-在开发过程中我们发现OpenCV的Java
-API不支持OpenCV Contrib，但是SIFT属于OpenCV Contrib的特征，因此在特征抽取我们用了Spark和OpenCV
-的Python接口。在用PySpark的时候碰了PYTHONPATH没有包含了OpenCV，但是通过调试与特殊配置解决了问题。
+        输入是一个通过在章\ref{subsec:seq-file}介绍的图像SequenceFile，
+        Key是一个String数据类型保存图像名字，Value是一个Bytes Array数据类型保存图像内容。
+        图像SequenceFile一般存在Hadoop兼容文件系统。
 
-在图\ref{fig:cloudvision-feature-extraction}可以看到简单化的Spark特征抽取程序的流程。
-第一步程序调用读取sequenceFile的函数，提供sequenceFile的目录和partition数，
-从Hadoop兼容文件系统读取SequenceFile，把SequenceFile划分到partitions，
-partition分布到Spark集群的executors的内存里。sequenceFile函数返回一个Spark的RRD object。
+        程序接受如下的参数：
+        \begin{itemize}
+            \item 特征名字，String数据类型，目前只支持SIFT或者SURF。
+            \item 输入图像SequenceFile目录，String数据类型，提供图像SequenceFile存储位置。
+            \item 输出特征描述parquet文件目录，String数据类型，提供特征parquet文件的该存储位置。
+            \item Partition数，Int数据类型，提供图像SequenceFile需要分成多少划分。
+        \end{itemize}
 
-第二布是用返回的RDD object的mapPartition函数，提供extractFeatures的作为mapPartition的函数。这样每个集群里
-的Spark Executor会在本地的partition执行extractFeatures函数。extractFeatures函数用OpenCV把图像
-转换图像特征。mapPartitions放回一个新的RDD，新的RDD数据有图像文件名字和图像特征。
-在算法\ref{lst:opencv-extract-features}可以看到extractFeatures的核心代码，
-特点在于从一个Python byte array转换到一个OpenCV的image，在第二行我们把
-在内存里的imgbytes转换成一个numpy.array叫nparr，第三行从nparr都城一个
-OpenCV的image object可以同来抽特征。在算法\ref{lst:opencv-extract-features}
-的代码描述了怎么高效从大数据结构化的数据抽取特征。
-\begin{lstlisting}[language=Python,
-                   basicstyle=\small,
-                   showstringspaces=false,
-                   caption={OpenCV从内存读取图像抽取特征},
-                   label={lst:opencv-extract-features}]
-imgfilename, imgbytes = imgfile_imgbytes
-nparr = np.fromstring(buffer(imgbytes), np.uint8)
-img = cv2.imdecode(nparr, 0)
-if feature_name in ["surf", "SURF"]:
-    extractor = cv2.SURF()
-elif feature_name in ["sift", "SIFT"]:
-    extractor = cv2.SIFT()
-kp, descriptors = extractor.detectAndCompute(img, None)
-return [(imgfilename, descriptors)]
-\end{lstlisting}
+  \item 实现方法
 
-第三步把特征的RDD写到持久存储。把Spark的RDD转换成一个Spark的DataFrame object，然后用DataFrame写到
-Hadoop兼容的文件系统，比如HDFS，S3或者Swift。DataFrame的结构使用图像名字作为地一个columnn，
-特征作为第二个column，特征是一个Array of Doubles。
+        \begin{figure}[h]
+          \centering
+            \includegraphics[width=0.76\textwidth]{cloudvision-feature-extraction}
+          \caption{CloudVision在Spark集群特征抽取的方式。}
+          \label{fig:cloudvision-feature-extraction}
+        \end{figure}
 
-为了解决Spark单任务开销问题，我们在第二比使用了mapPartitions。在读取的时候保证每个partition包括
+        在图\ref{fig:cloudvision-feature-extraction}可以看到简单化的Spark特征抽取程序的流程。
+        CloudVision控制管理层在处理集群自动部署好了OpenCV和Spark，保证PySpark可以调用OpenCV的
+        Python接口。
+        第一步程序调用读取sequenceFile的函数，提供sequenceFile的目录和partition数，
+        从Hadoop兼容文件系统读取SequenceFile，把SequenceFile划分到partitions，
+        partition分布到Spark集群的executors的内存里。sequenceFile函数返回一个Spark的RRD object。
+
+        第二步是用返回的RDD object的mapPartition函数，提供extractFeatures的作为mapPartition的函数。这样每个集群里
+        的Spark Executor会在本地的partition执行extractFeatures函数。extractFeatures函数用OpenCV把图像
+        转换图像特征。mapPartitions放回一个新的RDD，新的RDD数据有图像文件名字和图像特征。
+        在算法\ref{lst:opencv-extract-features}可以看到extractFeatures的核心代码，
+        特点在于从一个Python byte array转换到一个OpenCV的image，在第二行我们把
+        在内存里的imgbytes转换成一个numpy.array叫nparr，第三行从nparr都城一个
+        OpenCV的image object可以同来抽特征。在算法\ref{lst:opencv-extract-features}
+        的代码描述了怎么高效从大数据结构化的数据抽取特征。
+        \begin{minipage}{\linewidth}
+        \begin{lstlisting}[language=Python,
+                           basicstyle=\small,
+                           showstringspaces=false,
+                           caption={OpenCV从内存读取图像抽取特征},
+                           label={lst:opencv-extract-features}]
+        imgfilename, imgbytes = imgfile_imgbytes
+        nparr = np.fromstring(buffer(imgbytes), np.uint8)
+        img = cv2.imdecode(nparr, 0)
+        if feature_name in ["surf", "SURF"]:
+            extractor = cv2.SURF()
+        elif feature_name in ["sift", "SIFT"]:
+            extractor = cv2.SIFT()
+        kp, descriptors = extractor.detectAndCompute(img, None)
+        return [(imgfilename, descriptors)]
+        \end{lstlisting}
+        \end{minipage}
+
+        第三步把特征的RDD写到持久存储。把Spark的RDD转换成一个Spark的DataFrame object，然后用DataFrame写到
+        Hadoop兼容的文件系统，比如HDFS，S3或者Swift。DataFrame的结构使用图像名字作为地一个columnn，
+        特征作为第二个column，特征是一个Array of Doubles。
+
+
+  \item 输出
+
+        程序的输出是一个Parquet文件，里面有两列：图像名字和特征描述子响亮，
+        每一行表示一张图像。程序会在用户提供的存储位置保存此Parquet文件。
+
+\end{itemize}
+
+为了解决Spark单任务开销问题，我们在第二步使用了mapPartitions。在读取的时候保证每个partition包括
 多张图片。通过了解到数据集和服务器数量可以选择合适的partition数。定义为集群总体CPU核数为$c$，数据集
 大小用为$s$单元使用MB，推荐partition数为$p$，那通过在\ref{eq:partition_recommendation}的公式可以推荐partition数。
 \begin{equation} \label{eq:partition_recommendation}
@@ -242,7 +273,7 @@ p = max(c * 3, \frac{s}{32})
 介绍机器视觉的BoW特装转码和表示算法，其他GMM和VLAD算法使用
 BoW的思想。此算法首先都得基于数据集生产一个Visual Dictionary(词典），
 词典抽象图像的特点叫码字(visual codeword)，一般使用无监督机器学习算法生产词典，比如KMeans
-聚类算法或者Gaussion Mixture Model(GMM)算法。这第一步生产词典叫做
+聚类算法或者GMM算法。这第一步生产词典叫做
 词典学习，第二步使用词典从图像特征转码成图像表示，不同算法
 使用不同的特征转码方法。
 
@@ -264,25 +295,51 @@ CloudVision实现的KMeans词典学习方式支持多种特征不限于128维度
 不能直接用在一个X x 128的矩阵，需要换成一样大小的响亮。
 % optionally add picture of learning algorithm
 
-CloudVision词典学习过程序需要提供几个参数：选词典的大小$K$，特征文件目录，最大迭代数，KMeans模型目录。
-执行CloudVision字典学习程序会在提供特征文件目录的数据找出$K$个类的词典，如果没有找到局部最优最多会迭代用户
-提供的最大迭代数。在算法\ref{lst:kmeans-dictionary}列出了CloudVision字典学习核心代码，
-第一行分布式读取特征到Spark集群的每台executor，第二行用flatMap获取features列子和把X x Y的的矩阵变成X个1 x Y的向量然后缓存到Spark内存，
-第三行用Spark MLlib提供的分布式KMeans算法找出K个聚类，第五行保存结构到分布式存储。
-\begin{lstlisting}[language=Python,
-                   basicstyle=\small,
-                   showstringspaces=false,
-                   numbers=left,
-                   caption={词典学习核心代码},
-                   label={lst:kmeans-dictionary}]
-features = sqlContext.read.parquet(feature_parquet_path)
-flattened_features = features.flatMap(lambda x: x['features']).cache()
-model = KMeans.train(flattened_features, k, maxIterations=maxIter,
-                     initializationMode="random")
-model.save(sc, kmeans_model_path)
-\end{lstlisting}
-第二行解决上面定义的两个问题，通过Spark RDD的cache函数缓存到内存决迭第一个代算法瓶颈问题，
-通过flatMap转换一样大小响亮解决第二个问题。
+\subsection*{算法实现}
+机器视觉库分布式词典实现，主要使用Spark分布式机器学习库的KMeans。
+分布式实现细节如下：
+\
+\begin{itemize}
+  \item 输入和参数
+
+        输入是一个Parquet格式特征文件，该特征文件是用在本章\ref{sec:feature-extraction}描述的机器视觉库特征抽取程序。Parquet特征文件一般
+        存在Hadoop兼容文件系统。Parquet每一行是一个图像，要求有一列叫"features"。
+        程序接受的参数如下：
+        \begin{itemize}
+          \item 词典大小($K$)，Int数据类型，提供KMeans算法需要找出的聚类数。
+          \item 最大迭代数，Int数据类型，提供KMeans最多迭代多少次。
+          \item Parquet特征文件目录，String数据类型，提供特征Parquet文
+                件的存储位置。
+          \item KMeans模型文件目录，String数据类型，提供词典存储位置。
+        \end{itemize}
+
+  \item 实现方法
+
+        执行CloudVision字典学习程序会在提供特征文件目录的数据找出$K$个类的词典，如果没有找到局部最优最多会迭代用户
+        提供的最大迭代数。在算法\ref{lst:kmeans-dictionary}列出了CloudVision字典学习核心代码，
+        第一行分布式读取特征到Spark集群的每台executor，第二行用flatMap获取features列子和把X x Y的的矩阵变成X个1 x Y的向量然后缓存到Spark内存，
+        第三行用Spark MLlib提供的分布式KMeans算法找出K个聚类，第五行保存结构到分布式存储。
+        \begin{lstlisting}[language=Python,
+                           basicstyle=\small,
+                           showstringspaces=false,
+                           numbers=left,
+                           caption={词典学习核心代码},
+                           label={lst:kmeans-dictionary}]
+        features = sqlContext.read.parquet(feature_parquet_path)
+        flattened_features = features.flatMap(lambda x: x['features']).cache()
+        model = KMeans.train(flattened_features, k, maxIterations=maxIter,
+                             initializationMode="random")
+        model.save(sc, kmeans_model_path)
+        \end{lstlisting}
+        第二行解决上面定义的两个问题，通过Spark RDD的cache函数缓存到内存决迭第一个代算法瓶颈问题，
+        通过flatMap转换一样大小响亮解决第二个问题。
+
+
+  \item 输出
+
+        词典学习程序的输出是一个KMeans模型，里面保存$K$个聚类信息，保存到用户通过参数提供的
+        存储位置。
+\end{itemize}
 
 
 \subsection{特征转码与pooling}
@@ -297,51 +354,77 @@ BoW表示是码字的直方图。
 在CloudVision的特征转码与pooling面对了一个值得提的问题，
 如果分布式在每个Spark executor执行特征转码都需要同一个字典，
 这个词典每次从Hadoop兼容文件系统读取变成了一个IO性能瓶颈。
-下面介绍CloudVision特征转码用到Spark的broadcast功能解决此问题。
 
+\subsection*{算法实现}
+机器视觉库实现分布式BoW特征转码算法，主要用到Spark的分布式编程模式的map函数
+调用自己实现的BoW算法实现。实现细节如下：
+\begin{itemize}
+  \item 输入和参数 
+        特征转吗需要两个输入：地一个是Parquet特征文件，第二个是KMeans的词典。
+        要求Parquet每一行是一张图像，另外要求有一列叫"features"。KMeans词典使用
+        在上章介绍机器视觉库词典学习程序生产。
 
-\begin{figure}[h]
-  \centering
-    \includegraphics[width=0.66\textwidth]{cloudvision-feature-encoding}
-  \caption{CloudVision在Spark集群实现BoW特征转码与表示。}
-  \label{fig:cloudvision-feature-encoding}
-\end{figure}
-在图\ref{fig:cloudvision-feature-encoding}可以看到基于Spark分布式方式
-实现特征转码与表示。第一步从Hadoop兼容存储读取Parquet格式的图像的特征和KMeans model，这里KMeans model
-是在章\ref{subsec:dict-learning}学习的词典(Visual Codebook)。因为每个执行特征转码的Spark Executor都需要
-用这个词典，我们一次性通过Spark Broadcast变量把词典提前播放的每个Spark Executor的内存，避免每个节点单独从Hadoop
-兼容文件系统读取词典。\cite{spark-programming-guide}
+        程序接受的参数如下：
+        \begin{itemize}
+          \item Parquet特征文件目录，String数据类型，提供特征Parquet文
+                件的存储位置。
+          \item KMeans模型文件目录，String数据类型，提供词典存储位置。
+          \item Parquet BoW图像表示目录，String数据类型，提供Parquet文
+                件的存储位置。
+        \end{itemize}
+  \item 实现方法
 
-有了词典可以高效分布式执行特征转码过程，使用Spark分布式map操作执行
-BoW表示函数，BoW函数把每个图像特征矩阵变成一个1 x $K$个响亮表示码字的直方图。
-在算法\ref{lst:feature-encoding}可以看到BoW函数核心代码。
-第一行建立Spark KMeansModel。第二行建立一个1 x $K$的向量用来保存BoW表示。
-第三行建立一个循环遍历特征描述矩阵的每个关键点描述子。
-第四行用词典找出离关键点最近的码字。第六行在BoW表示向量
-增加相应的码字的个数。
-\begin{lstlisting}[language=Python,
-                   basicstyle=\small,
-                   numbers=left,
-                   showstringspaces=false,
-                   caption={BoW特征转码核心代码},
-                   label={lst:feature-encoding}]
-model = KMeansModel(dictionary)
-bow = np.zeros(len(dictionary))
-for keypoint_descriptor in feature_matrix:
-    k = model.predict(keypoint_descriptor)
-    if pooling = "sum":
-        bow[k] += 1
-return bow
-\end{lstlisting}
+       \begin{figure}[h]
+          \centering
+            \includegraphics[width=0.76\textwidth]{cloudvision-feature-encoding}
+          \caption{CloudVision在Spark集群实现BoW特征转码与表示。}
+          \label{fig:cloudvision-feature-encoding}
+        \end{figure}
+        在图\ref{fig:cloudvision-feature-encoding}可以看到基于Spark分布式方式
+        实现特征转码与表示。第一步从Hadoop兼容存储读取Parquet格式的图像的特征和KMeans model，这里KMeans model
+        是在章\ref{subsec:dict-learning}学习的词典(Visual Codebook)。因为每个执行特征转码的Spark Executor都需要
+        用这个词典，我们一次性通过Spark Broadcast变量把词典提前播放的每个Spark Executor的内存，避免每个节点单独从Hadoop
+        兼容文件系统读取词典，解决词典读取IO问题。\cite{spark-programming-guide}
 
-所有图像map到了图像表示后，使用Parquet格式保存保存到Hadoop兼容的文件系统。这个过程
-会分布式从每个Spark executor同时写本地处理的BoW表示写到持久存储。
+        有了词典可以高效分布式执行特征转码过程，使用Spark分布式map操作执行
+        BoW表示函数，BoW函数把每个图像特征矩阵变成一个1 x $K$个响亮表示码字的直方图。
+        在算法\ref{lst:feature-encoding}可以看到BoW函数核心代码。
+        第一行建立Spark KMeansModel。第二行建立一个1 x $K$的向量用来保存BoW表示。
+        第三行建立一个循环遍历特征描述矩阵的每个关键点描述子。
+        第四行用词典找出离关键点最近的码字。第六行在BoW表示向量
+        增加相应的码字的个数。
+        \begin{minipage}{\textwidth}
+        \begin{lstlisting}[language=Python,
+                           basicstyle=\small,
+                           numbers=left,
+                           showstringspaces=false,
+                           caption={BoW特征转码核心代码},
+                           label={lst:feature-encoding}]
+        model = KMeansModel(dictionary)
+        bow = np.zeros(len(dictionary))
+        for keypoint_descriptor in feature_matrix:
+            k = model.predict(keypoint_descriptor)
+            if pooling = "sum":
+                bow[k] += 1
+        return bow
+        \end{lstlisting}
+        \end{minipage}
+
+        所有图像map到了图像表示后，使用Parquet格式保存保存到Hadoop兼容的文件系统。这个过程
+        会分布式从每个Spark executor同时写本地处理的BoW表示写到持久存储。
+
+      
+  \item 输出
+
+        机器视觉库特征转码输出是BoW图像表示的Parquet文件，里面有两列文件名字和BoW图像表示向量，每一行是一张图像。
+
+\end{itemize}
 
 
 \section{分类器}
 \label{sec:cloudvision_classifier}
-CloudVision实现了主流的SVM分类其，这里说明分布式实现方式和碰到的问题。
 在章\ref{subsubsec:classifier}介绍了多个分类器，但是发现SVM是最常用。
+CloudVision实现了主流的SVM分类器，这里说明分布式实现方式和碰到的问题。
 无论在人工特征或者深度学习的特征SVM都可以达到最先进的结果。
 所有监督机器学习都采用一个学习过程，学习用有标签的数据训练出来一个模型，有了模型后才可以用
 它类未标签的数据。
@@ -358,63 +441,79 @@ Spark的MLlib已经包括一个binary(single class) SVM分布式分类器实现�
 \end{itemize}
 
 CloudVision分类器使用Scala实现，因为Scala可以更紧密的扩展MLlib原有的机器学习方法。
-为了训练分类器先需要预处理数据，在本章\ref{subsec:classifier-preprocessing}描述CloudVision分类器预处理数据(preprocessing)的实现方法，
-解决需要符合Spark MLlib格式数据的问题。然后在\ref{subsec:classifier-training}介绍基于处理好的训练数据训练多类别分布式SVM训练实现方法。
-在图\ref{fig:cloudvision-classifier}可以看到预处理和多类别SVM的实现方式。
-训练完了可以用多类别的SVM模型分类无知类别的数据，在\ref{subsec:classifier-label}描述CloudVision多类别SVM分类的实现。
-
-\begin{figure}[h]
-  \centering
-    \includegraphics[width=0.60\textwidth]{cloudvision-classifier}
-  \caption{CloudVision预处理和训练分类器实现}
-  \label{fig:cloudvision-classifier}
-\end{figure}
+为了训练分类器先需要预处理数据，
+在\ref{subsec:classifier-training}介绍处理和训练SVM算法分布式实现，
+解决需要符合Spark MLlib格式数据的问题。
+在\ref{subsec:classifier-label}描述多类别SVM的分类算法的实现。
 
 
-
-\subsection{数据预处理}
-\label{subsec:classifier-preprocessing}
-数据预处理需要从数据集获取类别ID和特征表示，组成一个Spark的LabeledPoint。
-Spark的LabeledPoint格式需要两个变量：类别ID(label)和特征向量(features)。
-类别ID的变量数据类型是Double，必须从零开始算每个整数表述一个独立的类别。
-特征向量变量的数据类型是Spark的org.apache.spark.mllib.linalg.Vector。
-
-从数据集获取类别ID，在多数数据集可以使用图像文件名字，
-比如在Caltech-256数据集每个图像文件名的格式是\{classid\}\_\{imgid\}.jpg，
-这样可以通过一个regex(正则表达式)从文件名找出类型，
-在Caltech256可以用这个正则表达式\verb|(\d+)_\d+.jpg|
-取出类型ID。
-
-在图\ref{fig:cloudvision-classifier}可以看到预处理实现方式，
-先从Hadoop兼容文件系统读取BoW特征向量和文件名字的DataFrame。
-然后通过一个分布式map操作，用上面描述的方式把文件名字和BoW变成
-一个RDD of LabeledPoint。
-
-
-
-\subsection{训练}
+\subsection{SVM分类器训练算法实现}
 \label{subsec:classifier-training}
-训练多类别的SVM分类器方法是每个类别独立训练一个二类分类器。
-假设有$N$个类别，那需要训练$1..N$个二类（binary）SVM分类器。
-在训练第$i$个列别的时候，先需要把数据集里所有不等于$i$的类别设置为$0$，
-然后将数据集里所有等于$i$的列别设置为$1$。这样我们把问题变成一个
-普通的二类SVM分类器问题。在图\ref{fig:cloudvision-classifier}可以但到最后部分训练的过程。
-在算法\ref{lst:classifier-training}是用pseudocode描述实现方式。
-\begin{lstlisting}[language=Python,
-                   basicstyle=\small,
-                   numbers=left,
-                   showstringspaces=false,
-                   caption={SVM多类别分类器训练pseudocode},
-                   label={lst:classifier-training}]
-svm_classifiers = []
-for classid in classes:
-    binary_label_features = features_bow.map(to_binary_label)
-    svm_classifiers.append(SVMWithSGD.train(binary_label_features))
-\end{lstlisting}
+机器视觉库的多类别SVM分类器的训练算法实现，使用多个Spark MLlib的分布式binary SVM分类器
+训练。实现细节如下：
+\begin{itemize}
+  \item 输入和参数
+  \item 实现方法
+
+        \begin{figure}[h]
+          \centering
+            \includegraphics[width=0.60\textwidth]{cloudvision-classifier}
+          \caption{CloudVision预处理和训练分类器实现}
+          \label{fig:cloudvision-classifier}
+        \end{figure}
+
+
+        \begin{itemize}
+    
+            \item 数据预处理
+
+            数据预处理需要从数据集获取类别ID和特征表示，组成一个Spark的LabeledPoint。
+            Spark的LabeledPoint格式需要两个变量：类别ID(label)和特征向量(features)。
+            类别ID的变量数据类型是Double，必须从零开始算每个整数表述一个独立的类别。
+            特征向量变量的数据类型是Spark的org.apache.spark.mllib.linalg.Vector。
+
+            从数据集获取类别ID，在多数数据集可以使用图像文件名字，
+            比如在Caltech-256数据集每个图像文件名的格式是\{classid\}\_\{imgid\}.jpg，
+            这样可以通过一个regex(正则表达式)从文件名找出类型，
+            在Caltech256可以用这个正则表达式\verb|(\d+)_\d+.jpg|
+            取出类型ID。
+
+            在图\ref{fig:cloudvision-classifier}可以看到预处理实现方式，
+            先从Hadoop兼容文件系统读取BoW特征向量和文件名字的DataFrame。
+            然后通过一个分布式map操作，用上面描述的方式把文件名字和BoW变成
+            一个RDD of LabeledPoint。
+
+
+            \item 训练
+
+
+            训练多类别的SVM分类器方法是每个类别独立训练一个二类分类器。
+            假设有$N$个类别，那需要训练$1..N$个二类（binary）SVM分类器。
+            在训练第$i$个列别的时候，先需要把数据集里所有不等于$i$的类别设置为$0$，
+            然后将数据集里所有等于$i$的列别设置为$1$。这样我们把问题变成一个
+            普通的二类SVM分类器问题。在图\ref{fig:cloudvision-classifier}可以但到最后部分训练的过程。
+            在算法\ref{lst:classifier-training}是用pseudocode描述实现方式。
+            \begin{lstlisting}[language=Python,
+                               basicstyle=\small,
+                               numbers=left,
+                               showstringspaces=false,
+                               caption={SVM多类别分类器训练pseudocode},
+                               label={lst:classifier-training}]
+            svm_classifiers = []
+            for classid in classes:
+                binary_label_features = features_bow.map(to_binary_label)
+                svm_classifiers.append(SVMWithSGD.train(binary_label_features))
+            \end{lstlisting}
+
+
+        \end{itemize}
+  \item 输出
+\end{itemize}
 
 
 
-\subsection{分类}
+
+\subsection{SVM分类器分类算法实现}
 \label{subsec:classifier-label}
 分类过程把无知类别的数据填上类别。多类别SVM分类器，使用$N$个类别的二类分类器
 ，这$N$个分类器是基于\ref{subsec:classifier-training}训练的，
