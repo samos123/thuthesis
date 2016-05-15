@@ -3,36 +3,35 @@
 
 \section{机器视觉研究现状}
 \label{subsec:cv_background}
-互联网公司像Facebook和Google通过文字的数据分析理解用户的兴趣，
-和爱好然后用这些信息推更有效的广告，设计新的产品
-等等。数据已经开始作为互联网时代的金子。因此通过分析大
-量的可视化的数据就可以带来更大的价值。在自主车领域
-需要事实分别出来周边的物体，基于周边环境信息做决定，
-自主车基于多个头像拍周边的环境。
+像Facebook和Google等互联网公司通过自然语言分析理解用户的兴趣和爱好，
+然后用这些信息推更有效的广告，设计新的产品
+等等。数据已经开始成为互联网时代的金子。通过分析大
+量的可视化的数据可以带来更大的价值。在无人自动驾驶领域
+，自动驾驶汽车基于多个头像拍摄周边的环境，实时分辨出来周边的物体，并基于周边环境信息做决定。
 
 机器视觉是一个专
-注与分析，处理和理解可视化数的数据的领域。可视化的数据
-是图片，视频，多生物的数据等等。在最近几年机器视觉的应
-用变了更广阔，主流的应用是自主车，车牌监控，机器人，物
+注于分析，处理和理解可视化数的数据的领域。可视化的数据
+包括图片，视频，生物数据等等。在最近几年机器视觉的应
+用变了更广阔，主流的应用包括无人自动驾驶汽车，车牌监控，机器人，物
 体检测。
 
 
-\subsection{主流作法}
-大部分主流的物体检测做法是有一个特征抽取和分类物体过程。\cite{juan2009comparison}
+\subsection{主流方法}
+大部分主流的物体检测方法是有一个特征抽取和分类物体过程。\cite{juan2009comparison}
 图片原始的信息有每个pixel的颜色度（RGB)，这些
 原始的信息在多大机器视觉应用场景，无法高效直接在分类器使用。
 在机器视觉，特征是为应用场景可以更好描述图片的相关信息。
-在本章\ref{intro:image_features}会纤细介绍主流的图片特征。
+在本章\ref{intro:image_features}会详细介绍主流的图片特征。
 
-在分类的过程，首先需要基于机器学习的算法，学出来一个模型，
+在分类的过程，首先需要基于机器学习的算法，训练出来一个模型，
 模型可以当作物体的分类器。
-学模型有两个方式，有监督学习和无监督学习。在物体检查和大部分机器视觉应用
-分类器使用一个有监督的学习算法。监督学习需要有标的训练数据。
-在本章\ref{subsubsec:classifier}会纤细介绍主流的分类器方法。
+训练模型有两种方式，有监督学习和无监督学习。在物体检查和大部分机器视觉应用中，
+分类器使用有监督的学习算法。监督学习需要有标的训练数据。
+在本章\ref{subsubsec:classifier}会详细介绍主流的分类器方法。
 
-在图\ref{fig:cloudvision-cvworkflow}可以看到第一步是在训练数据
-抽取特征，用特征和标训练出来模型。训练后了模型，可以使用无标的
-图片抽取特幀，然后使用学习好的模型分标给图片。
+在图\ref{fig:cloudvision-cvworkflow}可以看到第一步从训练数据
+抽取特征，用特征和结果标记训练出来模型。在分类阶段，可以使用无标的
+图片抽取特征，然后使用学习好的模型给图片分类。
 \begin{figure}[H]
   \centering
     \includegraphics[width=0.98\textwidth,trim=1 1 4 1,clip]{cloudvision-cvworkflow}
@@ -40,48 +39,47 @@
   \label{fig:cloudvision-cvworkflow}
 \end{figure}
 
-从1989年已经开始有人用神经网络在机器视觉的任务，
+从1989年已经开始有人将神经网络应用于机器视觉中，
 Yann Lecun使用了神经网络检测图片里面的数字。\cite{lecun1989backpropagation}
 他使用了一个16x16图片输入层每个输入神经对应图片的一个像素点，3个隐藏层，
 总共有1256个神经，9760个参数。最后
 输出层有10个神经对应每个数字的概率。神经网络的学习需要大量的计算能力，
-LeCunn那时候用了3天的时间训练出来参数。考虑到更大的数据集，像素度更高的
-图片和更多的隐藏层会发现那个时候计算能力是最有限制。
+LeCunn那时候用了3天的时间训练出来参数。由于计算能力的限制，考虑到更大的数据集，像素度更高的
+图片和更多的隐藏层，需要的时间会更多。
 
-Lecun做的方法只和是在小的固定的图片。物体识别应用不需要
-所有像素点，且更有价值是图片的最有兴趣的点比如物体的边界和特性。
-所以从1995到2010主要研究在人工的特征和特征编码与表示。
+Lecun做的方法只合适小的静态的图片。物体识别应用不需要
+所有像素点，而更有价值是图片的最有兴趣的像素点，比如物体的边界和特性。
+所以从1995到2010主要研究在于图片的特征，以及特征编码和表示。
 
 在1999，Lowe发布了
 Object recognition from local scale-invariant features介绍了
 SIFT(Scale-invariant feature transform，尺度不变特征转换)。\cite{lowe1999object,lowe2004distinctive}
 当时基于SIFT特征可以达到最先进的结果。SIFT主要价值
 在于可以从图片只拿到物体上的局部兴趣点，而且这些兴趣点不会被大小和
-旋转收到影响。大小和旋转不影响SIFT的特征是在物体检测更重要，因为
+旋转收到影响。大小和旋转不影响SIFT的特征在物体检测很重要，因为
 经常一个物体在不同的图片有不同的大小和旋转。
-光用SIFT对于一些基本的应用很合适但是在物体检测同一类型的物体
-会有一定的不同点。光用SIFT就无法抽象出来物体，所以采用了
-特征编码和表示。在2004年推出了用BoW在物体检测里面，
+光用SIFT对于一些基本的应用很合适，但是无法抽象出来物体，所以一般结合采用
+特征编码和表示。在2004年推出了在物体检测领域使用BoW，
 抽SIFT特征后用特征编码做出来一个BoW表示描述图片的信息，
-用BoW表示当作SVM分类其的输入和训练。\cite{csurka2004visual}
-重新达到了最先进的结果。一直到2010大部分研究在于人工特征和特征编码和表示。
+用BoW表示当作SVM分类其的输入和训练,\cite{csurka2004visual}
+重新达到了最先进的结果。一直到2010大部分研究集中于人工特征，特征编码和表示。
 在2006发布的Beyond Bags of Features: Spatial Pyramid Matching
 for Recognizing Natural Scene Categories，做了BoW和SIFT的改进
 达到了新的最先进的结果。 \cite{lazebnik2006beyond}
 在本章\ref{subsubsec:image_features}
 会详细介绍抽SIFT和相关特征的方法与编码方式比如BoW，VLAD和Fisher Vectors。
 
-从2010开始，深入学习把LeCunn用到的神经网络又复活来了，
+从2010开始，深入学习给神经网络带来了新的活力。
 主要靠Alex Krizhevsky发布的ImageNet Classification with Deep Convolutional Neural Networks。
-这次把神经网络做的更深度和大。打败了当时
-所有最先进的研究，包含基于SIFT特征的方法。以来20多年的
-计算能力提高和训练数据集大小的曾长，Alex推出一个更深度和大的神经网络。
+这次把神经网络做的更深度和大，打败了当时
+所有最先进的研究，包括基于SIFT特征的方法。依赖20多年的
+计算能力提高和训练数据集的增长，Alex推出一个更深度和大的神经网络。
 在图\ref{fig:cnn-architecture}可以看到CNN的深度神经网络
 有6000万个参数，65万个神经，5个卷积隐藏层。输出层
 有1000个神经，每个神经对应ImageNet的一个物体类别。
 跟1989年Lecun的网络对比，参数增加了大概6300倍。
-数据集有120万个高请有标识的图片。通过2个GPU并行计算加速了整个训练过程。
-最后用了6天训练出来了模型。\cite{krizhevsky2012imagenet,lee2009convolutional}
+数据集有120万个高清有标识的图片。通过2个GPU并行计算加速了整个训练过程。
+最后用了6天训练出了模型。\cite{krizhevsky2012imagenet,lee2009convolutional}
 \begin{figure}[H]
   \centering
     \includegraphics[width=0.98\textwidth]{cnn-architecture}
@@ -98,28 +96,28 @@ Vector，叫做CNN特征。然后可以用CNN特征同样用SVM的分类器，�
 现在主流做法多数使用深度学习达到最先进的结果，但是SIFT特征和
 特征编码与表示也还是有研究空间和应用。SIFT相关的特征计算快也
 不需要一个计算量很大的学习过程。
-SVM到现在一直站稳了分类器的优选位子，无论用深度学习
-的特征或者SIFT都使用SVM的分类器。
+SVM到现在一直站稳了分类器的首选位子，无论用深度学习
+的特征或者SIFT都可以使用SVM的分类器。
 
 \subsection{常用的特征与特征编码}
 \label{intro:image_features}
-本章现在常用的特征与表示详细介绍不同特征的特点，抽取方法，缺点与亮点。
-最后讲特征的转码与表示方法的特点，转码方法，缺点与两但。
-这章把特征分成两种：人工特征与学习出来的特征。人工特征由于人手工制作的抽取
-方法，基于有确定性的算法规定怎么抽取特征。学习出来的特征是基于
+本章详细介绍常用的特征与表示的特点，抽取方法和优缺点。
+最后讲特征的转码与表示方法的特点，转码方法和优缺点。
+本章把特征分成两种：人工特征与学习出来的特征。人工特征是指人手工制定的抽取
+方法，基于有确定性的算法规定来抽取特征。学习出来的特征是基于
 训练神经网络学出来特征的模型。人工特征有SIFT，SURF，HOG和其他的。
-人工特点经常为特定应用场景制作，因此在某个应用能达到最先进的结果
+人工特征经常为特定应用场景制作，因此在某个应用能达到最先进的结果
 但是无法应用在其他的应用场景。深度学习出来的特征经常可以在不同的
 应用场景通用。学习出来的特征需要一个很大的数据集才能达到好的效果。
-人工的特征完全不需要训练所以也不以来数据集。学习出来的特征
+人工的特征完全不需要训练所以也不依赖数据集。学习出来的特征
 可以采用别人在数据集已经训练好的模型直接使用。
 
 \subsubsection{人工特征介绍}
-人工特征是由于人通过有确定性的算法抽取图片的兴趣点，过滤没有用的信息。
+人工特征基于人通过有确定性的算法抽取图片的兴趣点，过滤没有用的信息。
 特征的兴趣点可能是边缘，图像梯度大的地方，物体等等。
 局部特征是从整个图片先找出关键点然后从关键点抽取特征描述。
 全局特征是从整个图片算出特征描述，不需要找出关键点。
-生下来我们介绍SIFT的局部特征，因为很多特征是积累SIFT的研究。
+接下来我们介绍SIFT的局部特征，因为很多特征是基于SIFT的研究。
 最后介绍一个主流的全局特征HOG。
 
 \subsubsection{SIFT特征}
@@ -134,7 +132,7 @@ SIFT的算法分两段：特征关键点检测和特征描述。在特征关键�
 SIFT找出所有兴趣点。在特征描述，SIFT从每个关键点抽取一个128维的
 向量描述各个关键点。\cite{wiki:sift}
 在图\ref{fig:sift-keypoints-localization}可以看到SIFT检测到的
-关键点的例子，所有圈子表示一个SIFT的关键点。
+关键点的例子，每个圈子表示一个SIFT的关键点。
 
 \clearpage
 \paragraph*{特征关键点检测}
@@ -152,13 +150,13 @@ $D \left( x, y, \sigma \right) = L \left( x, y, k_i\sigma \right) - L \left( x, 
 $G \left( x, y, k\sigma \right)$，在高斯滤波器$k \sigma$表示尺度，
 因此$L \left( x, y, k\sigma \right) = G \left( x, y, k\sigma \right) * I \left( x, y \right)$。
 高斯差图像是尺度$k_i\sigma$高斯模糊的图像和尺度$k_j\sigma$的差距。
-生产了高斯差图后，关键点是多迟到的高斯差图之间的最大值或者最小值。通过
+生产了高斯差图后，关键点是多尺度的高斯差图之间的最大值或者最小值。通过
 对比，在高斯差图里的每个像素点跟8个在同一尺度像素点和9个在不同尺度的相应像素点，
 算出最大值和最小值。算出来的最大或者最小值作为SIFT选择关键点。这一步，
 用高斯滤波器会找出关键点叫做尺度空间极值检测。在图\ref{fig:sift-keypoints-localization}
 最上面的图片，可以看到尺度空间极值检测找出的关键点。
 
-通过尺度空间极值检测找到了太多关键点，其中有邻近太近的和不稳定的点。
+通过尺度空间极值检测找到了太多关键点，其中有相邻太近的和不稳定的点。
 所以在关键点检测第二步做关键点精确定位，丢弃低对比度的关键点和消除边缘过度的点。
 
 首先通过二次泰勒级数展开高斯差的多尺度空间$D \left( x, y, \sigma \right)$，
@@ -241,11 +239,11 @@ PCA-SIFT算法跟SIFT算法区别在特征描述的算法：SIFT使用
 作为SIFT的128维的特征描述向量。
 PCA-SIFT把41x41的区域分成用2个39x39区域，
 算出横向梯度直方图和纵向梯度直方图，然后做Principal Component
-Analysis降低唯独算出一个36维的特征描述响亮。
+Analysis降低唯独算出一个36维的特征描述向量。
 在后续研究对比了PCA-SIFT的特征发现它在描述独特性比SIFT
 和其他特征差。\cite{mikolajczyk2005performance}
 
-SURF的主要贡献点在于优化整个关键点测和特征描述的过程，做法也是被SIFT启发的。
+SURF的主要贡献点在于优化整个关键点测和特征描述的过程，该做法也是被SIFT启发的。
 SURF的作者说SURF运行时间快几倍，另外在不同图像变换可以更稳定检测到关键点。\cite{bay2006surf}
 SIFT检测过程用多个尺度的图像算出高斯差图金字塔，在金字塔找出极值作为候选关键点。
 SURF关键点检测过程，先计算积分图，然后用Hessian矩阵的行列式找出局部变化
@@ -273,7 +271,7 @@ FAST在每个图像像素点通过本点周边的像素点直接检查是否是�
 用机器学习的决策树分类器。
 
 BRIEF是一个特征描述子，没有包含关键点检测。\cite{calonder2010brief}
-主要贡献点在于一个更小的用二进制表示特征描述响亮，可以
+主要贡献点在于一个更小的用二进制表示特征描述向量，可以
 用快的Hamming距离做特征对比不同图像的BRIEF特征描述。
 BRIEF描述法是在关键点取出一个模糊$S \times S$的Image Patch $p$。
 BRIEF的binary test function $t$，是在Patch内的像素点对比像素密度分配boolean值：
@@ -289,8 +287,8 @@ $$
 
 ORB是一个基于FAST角点检测器和BRIEF特征描述子的特征，
 重点是提供一个效果跟SIFT一样但是可以实时计算的特征。
-主要贡献是提供旋转不变性和提高图像噪点抵抗性，原生的
-FAST和BRIEF都却的。ORB推出了oFAST(Orientated FAST)，
+主要贡献是提供旋转不变性和提高图像噪点抵抗性。
+ORB推出了oFAST(Orientated FAST)，
 先创建一个多尺度的图像金字塔，在每个金字塔的level用FAST
 检测关键点然后，按Harris的corner measure顺序选前$n$个关键点。
 通过多尺度金字塔可以提供尺度不变性。在每个检测到关键点
@@ -298,7 +296,7 @@ ORB使用Intensity Centroid算出方向。
 另外ORB推出了rBRIEF特征描述，是一个旋转不变的BRIEF。ORB
 先旋转image patch然后再算出BRIEF特征描述。作者通过实验发现
 旋转的BRIEF特征描述的反差比原生BRIEF大，影响特征描述的独特性。
-通过一个自己的算法ORB学习怎么更好的选无相关的$(x, y)$对做
+通过一个自己的算法ORB学习怎么更好的选择无相关的$(x, y)$对做
 binary test，这样降低旋转BRIEF的方差。
 
 
@@ -306,8 +304,8 @@ binary test，这样降低旋转BRIEF的方差。
 全局特征从整个图像算出特征描述，不需要一个特征关键点检测的过程。
 在2005年，N. Dalal和B. Triggs推出了HoG(Histogram of Gradients)
 方向梯度直方图。\cite{dalal2005histograms}
-当时用在图像的人类识别，检测图像哪里有人类。另外的应用场景包括
-物体识别，场景识别和视频里的人类识别。HoG也是收一个被SIFT
+当时用在图像的人类识别。另外的应用场景包括
+物体识别，场景识别和视频里的人类识别。HoG也是受到SIFT
 启发的特征。
 
 \begin{wrapfigure}{r}{0.49\textwidth}
@@ -320,13 +318,13 @@ binary test，这样降低旋转BRIEF的方差。
 \end{wrapfigure}
 HoG的算法把整个图像分成$n$个连在一起的区域(cells)，每个区域先单独算出来
 它的梯度方向与梯度直方图。为了考虑照明和对比度的变化，HoG把多个区域
-连在一起然后归一化。所有区域归一化后的直方图作为HoG的特征描述响亮。
+连在一起然后归一化。所有区域归一化后的直方图作为HoG的特征描述向量。
 在图\ref{fig:hog-visualization}可以看到图像到HoG特征的可视化。
 
 在论文里面用了SVM分类器，用HoG的特征描述向量输入到SVM。
 作者在MIT pedestrian database训练了和测试了HoG + SVM的
 人类识别性能，几乎能正确识别整个测试数据集。因此作者
-再做了一个新的更有挑战和大的人类识别数据集。
+又做了一个新的更有挑战的，数据量更大的人类识别数据集。
 
 
 \subsubsection{深度学习特征}
@@ -351,9 +349,9 @@ HoG的算法把整个图像分成$n$个连在一起的区域(cells)，每个区�
 第二部从特征描述转码到图像表示(Image Representation)，
 然后图像表示用于在分类器的训练和分类。
 特征转码用一个词典(Visual Codebook)分配每个特征描述行属于
-哪个词，总结这个信息作出一个图像表示响亮。
+哪个词，总结这个信息生成一个图像表示向量。
 使用特征编码与图像表示，可以帮助提高识别类型的通用性。比如需要分类器
-在鉴于，影像，灯光和闭塞变化中，还是能识别出属于同一个类型。
+在影像和灯光变化中，还是能识别出属于同一个类型。
 最早的方法是在2004年发布的Visual Categorization with Bag of Keypoints，
 应用了Bag-of-Words的模型在机器视觉的任务。\cite{csurka2004visual}
 后续基于BoW改进的方式包含 Fisher Vector转码和VLAD。
@@ -404,22 +402,22 @@ HoG的算法把整个图像分成$n$个连在一起的区域(cells)，每个区�
 \section{大数据与分布数处理研究现状}
 \label{subsec:bigdata_background}
 数据增长从稀缺到过多，带来新的好处，但是同时也带来新的挑战。
-互联网公司一直跟数据的快速曾长在战斗。谷歌（Google）每天处理24PB的数据。
+互联网公司一直跟数据的快速增长做战斗。谷歌（Google）每天处理24PB的数据。
 Facebook的用户每小时保存1000万个图片，每天用户点赞30亿次。点赞的数据
 可以用来分析用户的兴趣和爱好，推出更有效的广告。
-除了互联网公司之外，其他行业也面对数据成倍曾长的情况，同样想抓我新的机会。
+除了互联网公司之外，其他行业也面对数据成倍增长的情况，同样想掌握新的机会。
 沃尔玛公司（Wal-Mart Stores Inc.)，来自与美国是一个在全球运营超市连锁企业，
 每小时处理100万的交易，保存到一个超过2.5PB的数据库，从这些数据沃尔玛找出买家的模式。
 数据在各个行业变了一个很重要的无形资产。\cite{mayer2013bigdata}
 
 大数据领域属于所有数据超过传统存储容量和处理能力，利用这些海量数据
-得到商务的优势。可以用3V数据曾长模型描述数据：
+得到商务的优势。可以用3V数据增长模型描述数据：
 \begin{itemize}
   \item Volume（数据量）： 数据的大小比如1PB。
   \item Velocity（速）：数据的输入和输出速度，比如每分钟保存1TB新数据。
   \item Variety（多样性）：数据包含不同的数据类型，比如文本，视频，图像，社交网络等等。
 \end{itemize}
-Gartner用3V模型定义成大数据："大数据是量特别大，高速曾长，多样性的数据
+Gartner用3V模型定义大数据："大数据是量特别大，高速增长，多样性的数据
 ，这些数据为了创造价值需要特殊的技术与分析模型。"\cite{bigdatadefinition}
 
 在2004年Google发布了"MapReduce：简单化集群的数据处理"，描述Google内部用的
@@ -427,9 +425,9 @@ Gartner用3V模型定义成大数据："大数据是量特别大，高速曾长�
 MapReduce是一个框架，用来在集群并行处理大数据。MapReduce程序组成一个Map（映射）函数和
 Reduce（归纳）函数。Map函数一般用来过滤和数据预处理，然后由Reduce函数总结数据比如算出平均值。
 用MapReduce函数是一个从函数变成范式借过来的。MapReduce贡献点是在于提出怎么在集群里高效与可靠
-并行执行MapReduce程序。MapReduce使用数据的局部性，处理数据在接近的节点减少数据移动。
+并行执行MapReduce程序。MapReduce使用数据的局部性，在接近的节点处理数据以减少数据移动。
 
-在2006年Doug Cutting被Google FileSystem和MapReduce收到启发开发了开源的Apache Hadoop。
+在2006年Doug Cutting受到Google FileSystem和MapReduce的启发开发了开源的Apache Hadoop。
 \cite{gfs2003, dean2008mapreduce, wiki:hadoop}Apache Hadoop是一个开源框架提供
 ，在普通硬件上的大数据集分布式存储与处理。Hadoop变了一个世界上的大数据技术标准，
 大互联网公司和企业都在用，典型的包含Facebook，Baidu，Yahoo，Ebay，Spotify。
@@ -445,8 +443,6 @@ Spark改善了MapReduce分布式框架，用内存运算技术提高性能，另
 \subsection{Apache Hadoop}
 \label{subsubsec:hadoop}
 Apache Hadoop是一个开源被Apache维护的分布式存储与处理框架。
-Hadoop所有模块都设计到，如果任意件硬件所发生故障不影响数据丢失
-和处理的结果。
 Apache Hadoop框架核心模块有：
 \begin{itemize}
   \item Hadoop Common：所有模块用的程序库和工具。
@@ -459,7 +455,6 @@ Apache Hadoop框架核心模块有：
 Hadoop的生态系统。Apache Hadoop大部分代码用Java写的，少部分脚本用Python写的，还有少部分Native代码用C写的。
 
 \subsubsection{Hadoop Distributed File System}
-\label{subsubsec:hdfs}
 HDFS是Hadoop实现的分布式，可扩展，高可用文件系统。一个HDFS集群分两种主要节点：Namenode和Datanode。
 HDFS集群一般有一个Namenode，由它保存记录和目录的层次和namespace(命名空间)。Namenode使用inodes表示文件和目录。Inode记录
 文件和目录的属性比如权限，修改与访问时间，空间配额和命名空间。HDFS把文件的内容分成多个blocks（块），默认一块是128MB，
@@ -501,7 +496,7 @@ Spark解决Hadoop MapReduce的限制，第一MapReduce的编程模型不够灵�
 中间结果保存到磁盘造成性能问题。
 
 Spark核心贡献点提出了RDD(Resilient Distributed Dataset)，一个只读数据结构分布到
-集群各个节点的内存。在RDD数据结构上除了Map和Reduce用户可以用其他的函数比如forloop
+集群各个节点的内存。在RDD数据结构上除了Map和Reduce操作，用户可以用其他的函数比如forloop
 实现分布式处理，给用户带来更好的编程灵活性，因此Spark合适写迭代算法比如机器学习算法。
 
 \begin{wrapfigure}{r}{0.45\textwidth}
@@ -515,7 +510,7 @@ Spark核心贡献点提出了RDD(Resilient Distributed Dataset)，一个只读�
 核心是SparkContext，由SparkContext负责从Cluster Manager申请集群
 里的资源，将ClusterManager分配并且执行Spark的executors。SparkContext根据
 用户写的程序分配任务(Task)到每个executor，
-executors的Task是最终处理数据。如果任务失败了，SparkContext负责
+由executors的Task最终处理数据。如果任务失败了，SparkContext负责
 重新调度和分配这个task到executor，提供任务执行的可靠性。
 Spark支持多种Cluster Manager，Spark自带，
 Apache Mesos和Apache YARN。另外Spark的RDD记录所有操作，如果
@@ -530,11 +525,9 @@ Apache Mesos是一个开源的集群管理软件。Mesos自己定为成
 Mesos集群架构分成Mesos Master和Mesos Slave。
 Mesos Masters管理所有的slaves。Mesos Frameworks比如Spark，
 会从Master收到集群里的资源情况信息，叫Resource Offers，
-由于Framework的Scheduler决定要用哪些节点的资源。
-如果觉得在资源$X$执行，Mesos Master将Framework的executor
-执行在资源$X$。
+由Framework的Scheduler决定要用哪些节点的资源。
 
-除了Spark之外Mesos也支持其他软件执行在Mesos集群上，比如Storm，
+除了Spark之外，Mesos也支持其他软件执行在Mesos集群上，比如Storm，
 Marathon，Cassandra，Jenkins。另外用户可以用Mesos的API开发
 新的Mesos Framework支持其他的软件。
 
@@ -543,20 +536,20 @@ Marathon，Cassandra，Jenkins。另外用户可以用Mesos的API开发
 \section{云计算领域研究现状}
 \label{subsec:cloud_background}
 云计算是一个通过网络按需求提供计算资源（比如服务器，网络，存储，应用，服务）的模型，
-资源可以快速调配和解放，
-调配与解放资源需要运营商少量的管理工作。\cite{mell2011nist}
+资源可以快速调配和释放，
+调配与释放资源需要运营商少量的管理工作。\cite{mell2011nist}
 云计算的模型有五个特性：
 \begin{itemize}
   \item 按需的自助服务 - 
         用户随时可以调配与使用资源。调配过程不需要任何人的参与。
   \item 用网络提供接入 - 
-        资源与功能可以通过网络被访问。推动不同的客户端都可以访问，比如手机，浏览器。
+        资源与功能可以通过网络被访问。不同的客户端都可以访问，比如手机，浏览器。
   \item 资源池化 - 
         运营商的的计算资源是池化，动态按需给用户分配物理或者虚拟计算资源。用户无感知
         具体那些物理资源分配给他，用户只知道给他分配了他需要的资源。池化资源例子包括
         存储，计算，内存和网络带宽。
   \item 高弹性 - 
-        资源与功能可以弹性的调配与解放。某些场景也提供自动调配与解放支持按业务量的自动扩展。
+        资源与功能可以弹性的调配与释放。某些场景也提供自动调配，按业务量自动扩展和收缩。
         对于用户来说，他感知云提供的资源是无限，无论什么时候都可以调配他需要的资源。
   \item 计量服务 - 
         云平台用计量的功能自动控制与优化资源。所有资源的使用的数据报给运营商和用户。
@@ -577,9 +570,9 @@ IaaS是提供基础设施的资源比如服务器，存储和网络的资源。
         多云平台数据转播和负载均衡。
 \end{itemize}
 
-分析了云计算的定义与概念后，可以了解到，它对于用户带来的价值。
+分析了云计算的定义与概念后，可以了解到它对于用户带来的价值。
 通过云提供的按需自助服务，用户自己不需要管理基础资源，他需要资源
-可以灵活的占用需要的资源，通过云的多租户性其他用户可以使用他解放的资源，提供
+可以灵活的占用需要的资源。通过云的多租户性，其他用户可以使用他解放的资源，提供
 资源的有效使用和快速上线业务能力。
 
 企业可以用云平台减少资本支出，之前企业需要自己长期投资数据中心，用云企业可以
@@ -609,7 +602,7 @@ AWS的主要基础设施存储服务有两种，Elastic Block Storage(EBS)和Sim
 EBS给EC2的实例提供块存储，可以理解为虚拟硬盘。EC2实例可以按需求连接和卸载EBS提供的块设备。
 S3是一个独立的对象存储服务，可以通过标准的HTTP REST，SOAP，BitTorrent接口，保存，访问，删除任何文件。
 S3通过SLA保证数据容量扩展性，高可用和数据持久性。
-S3经典用户有Reddit，Dropbox，Tumblr，Pinterest。\cite{wiki:s3}
+S3主要大用户有Reddit，Dropbox，Tumblr，Pinterest。\cite{wiki:s3}
 
 AWS的基础设施网络有，Virtual Private Cloud(VPC)，Elastic Load Balancing(ELB)，Route 53。
 VPC给EC2的实例内部隔离网络的功能，用户可以按需求定义多个隔离的网络。原来所有EC2的
@@ -648,7 +641,7 @@ OpenStack最早来自NASA和RackSpace合作，开发一个AWS的开源实现。
 
 在2016年发布的Mitaka版本，OpenStack由25000贡献者来自1500多不同的公司贡献了OpenStack社区的代码。\cite{stackalytics_mitaka_loc}
 在图\ref{fig:openstack-contributors}，可以看到全世界前10名公司的贡献者，第一名是Mirantis，第二名是IBM，
-第三名是HP和Red Hat(红帽）。多个大企业的贡献和投资意即OpenStack成为开源云平台的标准。
+第三名是HP和Red Hat(红帽）。多个大企业的贡献和投资意在让OpenStack成为开源云平台的标准。
 
 OpenStack在各个行业都有大户包括互联网，金融，电信，教育，企业和运营商。
 大部分用户用来内部的私有云，但是也有公司基于OpenStack提供公有云的业务。
@@ -664,7 +657,7 @@ OpenStack在各个行业都有大户包括互联网，金融，电信，教育�
 \end{itemize}
 CERN是一个大的OpenStack用户，有15,000多个物理服务器和100PB数据量的集群通过OpenStack
 提供给CERN的研究员IT资源。CERN的Large Hadron Collider记录粒子碰撞粒子的数据，每次碰撞
-的数据量是1PB左右，然后需要处理集群分析并保存数据。通过OpenStack，研究员于自助的方式
+的数据量是1PB左右，然后需要处理集群分析并保存数据。通过OpenStack，研究员用自助的方式
 使用IT的资源，同时CERN的IT部门可以更高效的运营数据中心的资源。\cite{cern_user_story}
 
 \paragraph{OpenStack架构}
@@ -676,7 +669,7 @@ CERN是一个大的OpenStack用户，有15,000多个物理服务器和100PB数�
 \end{figure}
 OpenStack跟AWS的架构很类似，分开计算，存储，网络和其他服务到不同的独立的组建。
 在图\ref{fig:openstack-arch}可以看到OpenStack的核心组件和组件之间的关系。
-OpenStack的Identity(Keystone)服务提供租户和权力管理功能，所有组件以来
+OpenStack的Identity(Keystone)服务提供租户和权限管理功能，所有组件以
 Identity服务验证API请求是否有认证和权限。Compute(Nova)服务通过
 虚拟化或裸服务器提供计算资源。Networking(Neutron)服务给Compute服务
 提供网络资源的服务。Block Storage(Cinder)服务提供给Compute服务
@@ -685,7 +678,7 @@ Compute服务的镜像，比如操作系统镜像或者用户传上的应用镜�
 Object Storage(Swift)是OpenStack的对象存储，保存任何文件，
 Image服务可以配成用对象存储保存镜像的文件。Dashboard(Horizon)
 是为所有组建提供Web界面，调用各个组建的RESTful API。了解到核心组建与
-关系后，介绍计算，网络和存储组件的详细功能和实现方法。
+关系后，下面介绍计算，网络和存储组件的详细功能和实现方法。
 
 \begin{wrapfigure}{r}{0.40\textwidth}
   \centering
@@ -705,9 +698,9 @@ Compute是OpenStack的计算资源服务。Compute自己不包含虚拟化的软
 Hyper-V，LXC，VMWare vSphere。Compute的KVM虚拟化驱动是在OpenStack社区测试的最好和最受欢迎的驱动。
 在2016的用户调查总计95\%的部署用KVM作为计算服务的技术选择。
 
-Networking是OpenStack的网络资源服务。Networking服务抽象出来网络资源，让OpenStack运营商选不同的
-网络技术实现Networking的服务。Networking是一个虚拟网络服务提供API让用户自己定义网络拓扑和管理IP地址，
-另外也提供路由器，负载均衡和其他3层以上的网络服务。Compute使用Networking的服务提供给服务器网络链接。
+Networking是OpenStack的网络资源服务。Networking服务抽象出来网络资源，让OpenStack运营商选择不同的
+网络技术实现Networking的服务。Networking是一个虚拟网络服务，它提供API让用户自己定义网络拓扑和管理IP地址，
+另外也提供路由器，负载均衡和其他3层以上的网络服务。Compute使用Networking服务提供给服务器网络链接。
 Networking支持用OpenvSwitch，Linux Bridge和多个SDN厂家的技术。在2016的用户调查总计60\%的部署
 用开源的OpenvSwitch作为Neutron的驱动。OpenvSwtich也是OpenStack社区官方推荐和支持度最高的驱动。
 
@@ -729,11 +722,11 @@ Object Storage是OpenStack的对象存储服务。Object Storage是一个完全�
 软件的开发，测试，部署和运维的流程，促进流程更可靠和频繁被执行。
 本章介绍DevOps常用的自动部署与配置管理工具，自动化运维和部署的流程。
 
-如果没有自动化部署和配置，就造成可能在测试的时候部署与配置跟生产不一致，
-自动化了部署与配置后，可以一样部署在测试生产，也可以避免人为故障。
-在Linux最简单的方法自动化配置与安装是写Bash脚本，执行一系列的Linux命令。
-用Bash脚本很有限制，很难做成幂等的脚本，保证如果脚本被执行多次，
-执行后的结果每次都一样。对于可靠，稳定性能一模一样重复一个部署的环境很重要。
+如果没有自动化部署和配置，可能造成测试环境的部署和配置跟生产环境不一致。
+自动化了部署与配置后，可以对测试环境和生产环境统一部署，也可以避免人为故障。
+在Linux最简单的自动化配置与安装方法是写Bash脚本，执行一系列的Linux命令。
+用Bash脚本很有限制，很难做成幂等的脚本，保证脚本被执行多次，
+执行后的结果每次都一样。
 另外用Bash脚本没有标准化，不同的人可能用完全不一样结构和写法。
 专门配置管理工具解决Bash脚本的问题，提供一个标准化幂等的自动部署工具。
 本章介绍Puppet和Ansible的开源配置管理软件。
@@ -743,12 +736,12 @@ Object Storage是OpenStack的对象存储服务。Object Storage是一个完全�
 既然IT运维人员维护的系统越来越多，强调运维自动化的重要性。
 手工当然无法扩展到大规模的集群。
 理想是有一个自动化系统，大家都可以用，而不是限于内部使用
-脚本。Puppet协助运维人员社区建立和共享成熟的工具，
-避免重复大家解决同一问题。Puppet以两种方式达到，第一
-Puppet提供一个框架简单化大部分运维人员的技术任务，第二
+脚本。Puppet协助运维人员进行社区建立，共享成熟的工具，
+避免重复大家解决同一问题。Puppet以两种方式达到：第一，
+Puppet提供一个框架简单化大部分运维人员的技术任务;第二
 用Puppet定义的语言可以容易分享和维护。
 Puppet是一个在2005年被Puppet Labs开发的，
-幂等和跨操作系统平台配置管理系统。\cite{puppet_docs}
+幂等和跨操作系统平台配置的管理系统。\cite{puppet_docs}
 
 \begin{wrapfigure}{r}{0.40\textwidth}
   \centering
@@ -758,43 +751,43 @@ Puppet是一个在2005年被Puppet Labs开发的，
 \end{wrapfigure}
 Puppet最常用的架构是一个Master/Slave架构。所有Slave定期（默认每30分钟）
 从Master节点下载最新的配置，然后Slave保证本地配置跟从Master下载的配置是一致。
-Slave执行完了配置更新，报给Master是否更新了配置还是原来的配置已经一致。
+Slave执行完了配置更新，报给Master其执行结果。
 
 用Puppet自动化配置管理需要用Puppet基于Ruby定义的语言。Puppet语言的核心是
-使用Resources，语言其他方面主要用处为了更灵活和方便的使用Resources。
+使用Resources，其他方面主要为了更灵活和方便的使用Resources。
 一个Puppet Resource可能描述一个单独的系统包的状态或者文件的内容等等。
-多个Resource可以被组织成一个Class，比如描述怎么配置整个应用，多个配置文件
-，系统包等等。小的Class又可以被组织成一个更大的Class比如描述一个数据库服务角色。
-Node（节点或者服务器）要分配多个角色需要分配它多个Class。指定哪些Class分配
-到哪些Node叫Puppet的node classification。Puppet Modules（模块）是一种自我包含的包，
-带运维人员写的Puppet的Resources, Classes和文件，促进容易共享和标准化的结构。
+多个Resource可以被组织成一个Class，描述怎么配置整个应用，多个配置文件
+，系统包等等。小的Class又可以被组织成一个更大的Class,可以描述一个数据库服务角色。
+Node（节点或者服务器）要分配多个角色，首先需要分配它多个Class，然后指定哪些Class分配
+到哪些Node。这个过程叫Puppet的node classification。Puppet Modules（模块）是一种自我包含的包，
+带运维人员写的Puppet的Resources, Classes和文件，易于共享和形成标准化的结构。
 
 \subsection{Ansible}
 \label{subsubsec:ansible}
-Ansible跟Puppet一样是一个幂等的配置管理系统，简单化运维的自动化。跟Puppet主要区别在于架构和Ansible用YAML格式文件
-定义系统配置的状态。Ansible的架构没有用Master/Slave的架构，Ansible没有用agents，这样被Ansible管的节点都
-不需要装任何软件。Ansible通过高安全的SSH认真和访问被管理的节点。
+Ansible跟Puppet一样是一个幂等的配置管理系统，用于运维的自动化。跟Puppet不同，Ansible没有用Master/Slave的架构，Ansible没有agents，这样被Ansible管的节点都
+不需要装任何软件。Ansible通过高安全的SSH认证访问被管理的节点。
 
 Ansible通过自带modules抽象常用的资源比如装系统包。
 Modules是在管理的节点被执行的部分，比如Ansible的apt module管理Debian/Ubuntu的包，用户可以通过apt模块指定
 哪些包得装上哪些包不能装上。除了Ansible自带的modules用户也可以加自己的module。
 
 Role是Ansible定义的目录结构，role目录下有tasks, handlers, templates, files, vars, defaults。Roles的
-tasks，handlers，vars，defaults目录下得有一个main.yaml文件。tasks描述需要执行的modules和它们参数。handlers
-描述发生时间可以被执行的任务，跟tasks很类似也是说明执行哪些modules和它们参数。
+tasks，handlers，vars，defaults目录下有一个main.yaml文件。tasks描述需要执行的modules和它们的参数。handlers
+描述发生时间,可以被执行的任务,执行哪些modules和它们参数。
 templates目录下保存所有模板化的文件，比如可以提供参数的配置文件。Files目录下保存
 所有静态的文件，比如一些没有任何可调参数的配置文件。vars和defaults目录下的文件描述
 role可调的参数，用role的用户可以通过role暴露的参数定定制适合自己的需求。
 
 Ansible可以同时管理不同的基础设施环境。它通过inventory描述所有被管理的节点，
-执行ansible可以制定需要用哪个inventory文件部署。另外也支持从基础设施云平台
-动态的获取所有节点用作inventory。inventory文件用ini格式，每个section表示一个
+执行Ansible可以制定用哪个inventory文件部署。另外也支持从基础设施云平台
+动态获取所有节点用作inventory。inventory文件用ini格式，每个section表示一个
 server group(节点组)，section下每行表示一个被管理的节点。
 
-Ansible的playbook分配roles(角色）到在inventory里定义的节点组。用YAML格式描述
+Ansible的playbook分配roles(角色）到inventory里定义的节点组。用YAML格式描述
 每个服务器得装那些软件，服务和配置。
 
 %TODO: If time left provide a simple example
+
 
 
 
