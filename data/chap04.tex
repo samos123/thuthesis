@@ -166,9 +166,9 @@ SIFT的局部特征算法有两部分，特征关键点检测和特征描述子�
 从Spark调用OpenCV面对的问题：
 \begin{itemize}
   \item 从Spark调用OpenCV问题 \\
-        Spark提供Java，Scala和Python的language bindings。OpenCV也提供C++，Java和Python的API。
-        需要考虑到哪个语言更合适还有在每个服务器装上OpenCV，保证Spark可以调用OpenCV的接口。
-        Java problem
+        Spark提供Java，Scala和Python的language bindings。OpenCV提供C++，Java和Python的API。
+        需要保证Spark的每个计算节点能够调用相应的OpenCV接口。另外发现Java的接口不全，没有提供
+        SIFT特征抽取的接口。
   \item 从SequenceFile高效读取图像到OpenCV需要格式的问题 \\
         OpenCV一般从一个文件目录读取图像，在大数据结构所有图像在SequenceFile里面，读的时候直接把图像读到内存。
         在网上的方式都先把图像写到一个暂时的文件然后从暂时文件读到OpenCV的图像Image class，但是这个方式带来Disk IO的平静。
@@ -234,15 +234,22 @@ p = max(c * 3, \frac{s}{32})
 
 \section{特征编码与图像表示}
 \label{sec:image-representation}
-在章\ref{subsubsec:feature-encoding}我们介绍了BoW, Fisher Vector和VLAD的特征转码与图像表示的方法。
-介绍的特装转码与图像表示方法同样都有一个Visual Dictionary（词典）学习过程，BoW使用KMeans学习，
-Fisher Vector使用Gausian Mixture Model(GMM)学习，VLAD可以选使用KMeans或者GMM学习。
-学习词典后，用词典分配每个特征描述子的点到一个codeword（码字），这过程叫Feature Encoding（特征转码），然后通过
-pooling把所有点计算在一起得到一个图像表示。
+在章\ref{subsubsec:feature-encoding}我们介绍了特征转码和图像表示算法，
+图像表示比直接原生的特征可以更好的抽象物体的特性。所以在图像分类应用中，
+经常会采用特装转码和图像表示的算法。
 
-为了演示特征编码与图像表示过程，CloudVision实现了BoW + Sum pooling的特征转码与图像表示，
-主要原因其他方法是基于BoW的改进而且实现相对复杂。在章\ref{subsec:dict-learning}介绍CloudVision
-BoW词典学习的实现方法，然后在章\ref{subsec:feature-encoding}介绍CloudVision的BoW特征转码与pooling
+最经典算法是在章\ref{subsubsec:feature-encoding}
+介绍机器视觉的BoW特装转码和表示算法，其他GMM和VLAD算法使用
+BoW的思想。此算法首先都得基于数据集生产一个Visual Dictionary(词典），
+词典抽象图像的特点叫码字(visual codeword)，一般使用无监督机器学习算法生产词典，比如KMeans
+聚类算法或者Gaussion Mixture Model(GMM)算法。这第一步生产词典叫做
+词典学习，第二步使用词典从图像特征转码成图像表示，不同算法
+使用不同的特征转码方法。
+
+本章描述CloudVision库的分布式BoW特征转码
+与表示实现，
+选择实现BoW算法原因是其他方法是基于BoW的改进而且实现相对复杂。在章\ref{subsec:dict-learning}介绍CloudVision
+BoW词典学习的实现方法，然后在章\ref{subsec:feature-encoding}介绍CloudVision的BoW特征转码
 实现方法。
 
 \subsection{词典学习}
@@ -274,7 +281,7 @@ model = KMeans.train(flattened_features, k, maxIterations=maxIter,
                      initializationMode="random")
 model.save(sc, kmeans_model_path)
 \end{lstlisting}
-第二行的代码解决上面定义的两个问题，通过Spark RDD的cache函数缓存到内存决迭第一个代算法瓶颈问题，
+第二行解决上面定义的两个问题，通过Spark RDD的cache函数缓存到内存决迭第一个代算法瓶颈问题，
 通过flatMap转换一样大小响亮解决第二个问题。
 
 
