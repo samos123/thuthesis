@@ -1,289 +1,431 @@
-\chapter{CloudVision环境建设及实验验证}
-\label{cha:cloudvision_experiment}
-本章描述基于OpenStack建设的私有云，用于做CloudVision的实验和学院老师及同学。
-在章\ref{sec:priv-cloud-deployment}我们描述规划和部署私有云的细节，了解到
-CloudVision实验的环境情况。
-为了了解CloudVision架构的特性，我们做了两个实验，横向扩展性实验和内存缓存实验。
-在章\ref{sec:scalability-experiment}描述做的横向扩展性实验，了解到在增加
-计算节点的情况下是否能提高性能。在章\ref{sec:memory-cache-experiment}描述
-做的内存缓存实验，了解到内存缓存在不同机器视觉库应用带来的性能提高。
-
-
-\section{OpenStack私有云实验环境建设}
-\label{sec:priv-cloud-deployment}
-为了给学院的老师与同学提供一个灵活的基础设施环境，我们建设的
-清华软件学院的信息系统与工程研究所多租户的OpenStack私有云。
-目前已经有多个用户同时在使用建设的私有云。在2014年秋天开的
-叶晓俊老师开的云数据管理(1)，用到了建设的私有云，给课程的
-学生提供实验环境，每个组分配了3个服务器，总共有7个组，
-用到了21个虚拟机。通过OpenStack可以快速提供立即能用到
-的服务器资源，用完了回收给资源迟，提供给别人用。所以
-特别合适于给课程的学生用，提供灵活的基础设施。
-在OpenStack之前，课程的学生得在自己电脑装虚拟机或者
-去机房手动部署操作系统等等才能做实验，建立的私有云
-提基础设施的使用率和实验效率。
-
-另外实验室里的同学也用到了建设的私有云提供研究和实验环境。
-丁贵广几个研究项目，本论文的CloudVision开，Hadoop自动部署，MongoDB研究，用到
-私有云提供开发和实验环境。CloudVision的横向扩展性实验和内存缓存实验，
-用了私有云提供的服务器资源跑实验，另外用了OpenStack Swift的对象存储
-保存实验的数据集和结果。
-
-\subsection{私有云部署规划}
-这里我们描述建设的过程和细节。建设流程分了三个阶段：
-先设计与规划需要的硬件资源和分配角色，然后基于准备准备的方案准备硬件和部署OpenStack，
-最终基于功能测试保证可用性和提供平台的技术支持。
-
-我们部署了OpenStack的Juno版本。每个OpenStack组件都得选使用什么技术去实现。我们选了Nova组建使用KVM，
-选了Neutron使用OVS + VLAN实现网络服务，
-选了Cinder，Swift和Nova零时存储使用分布式的Ceph存储提供统一化的存储实现。
-另外我们使用了Fuel部署和管理OpenStack平台本身。
-在OpenStack环境的部署分成不同的角色：Controller(控制节点），Compute（计算节点），Storage(存储节点），Fuel Master（部署节点）。
-Controller是主要跑OpenStack的API，界面，数据库，信息队列，调度器。Compute是
-负责跑虚拟机。Storage节点是执行Ceph的软件提供高可用的存储集群。
-每个角色硬件需求不一样，Controller需要少量的CPU，内存和磁盘，
-Compute主要需要CPU和内存，Storage主要需要磁盘。
-
-为了不浪费资源，我们用到了学院原有的服务器，总共学院提供了
-7台物理服务器，在表\ref{tab:hardware-table}可以看到
-每个服务器具体的配置和分配的角色。第一个服务器ctrl1-2-mix
-为了更好的利用到有限的资源使用三个KVM虚拟机跑
-两个Controller节点和一个Fuel的节点。另外选了使用Compute和Storage
-的混合角色，原因同样为了更好的利用资源。
-\begin{table}[H]
-  \centering
-  \begin{minipage}[t]{0.98\linewidth} % 如果想在表格中使用脚注，minipage是个不错的办法
-  \caption[私有云硬件配置和分配]{私有云硬件配置和分配}
-  \label{tab:hardware-table}
-    \begin{tabularx}{\linewidth}{lXlX}
-      \toprule[1.5pt]
-        名字 & 牌子和配置 &  物理位子 & 注解\\
-        ctrl1-2-mix & 自己组装\newline(24CPU, 80GB, 4x1.8TB) & r1n2 & Fuel, Controller1, Controller2  \\
-        ctrl3-ceph & 自己组装\newline(24CPU, 64GB, 4x1.8TB) & r1n5 & Controller和Storage角色  \\
-        compute1 & 自己组装\newline(24CPU, 56GB, 4x1.8TB) & r1n3 & Compute和Storage角色  \\
-        compute2 & 自己组装\newline(24CPU, 80GB, 4x1.8TB) & r1n1 & Compute和Storage角色  \\
-        compute3 & 自己组装\newline(24CPU, 64GB, 4x1.8TB) & r1n4 & Compute和Storage角色  \\
-        compute4 & Dell PowerEdge R910\newline(48CPU, 64GB, 3x0.5TB) & r1n7 & Compute和Storage角色  \\
-        compute5 & Dell PowerEdge R910\newline(48CPU, 64GB, 3x0.5TB) & r2n7 & Compute和Storage角色  \\
-      \bottomrule[1.5pt]
-    \end{tabularx}
-  \end{minipage}
-\end{table}
-
-
-\subsection{私有云网络方案}
-在OpenStack的部署，最容易出问题和规划是网络部分，主要原因是OpenStack也提供网络虚拟化同时
-OpenStack自己的网络架构复杂。这里我们简单描述OpenStack的网络，具体网络规划，物理和逻辑网络拓扑。
+\chapter{CloudVision分布式机器视觉库}
+\label{cha:distributed_vision_library}
+本章介绍CloudVision实现的分布式机器视觉的算法，
+这些算法作为CloudVision的核心分布式机器视觉算法库。
+用户可以通过CloudVision的控制与管理层，直接提交
+器视觉库的任务。另外机器视觉库作为一个参考实现，让
+用户更深了解怎么写自己的CloudVision分布式机器视觉的程序。
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=0.50\textwidth]{os-logical-networks}
-  \caption{OpenStack逻辑网络拓扑}
-  \label{fig:os-logical-networks}
+    \includegraphics[width=0.99\textwidth]{computer-vision-library}
+  \caption{CloudVision分布式机器视觉库实现的阶段}
+  \label{fig:computer-vision-library}
 \end{figure}
-在图\ref{fig:os-logical-networks}可以看到我们的OpenStack逻辑网络拓扑。
-图里分成不同的角色，将每个角色描述清楚它属于哪些网络。我们定义了五种网络：
-Public/Floating（对外网络），Management(OpenStack本身管理网络)，Private（虚拟机私有网络或者租户网络），
-Admin/PXE(部署网络）。Public/Floating网络负责给虚拟机和OpenStack本身提供对外访问接入，因此需要跟OpenStack外面的路由器
-集成，比如在企业内部
-的所有员工能访问的网络或者校园网络是一个Public网络，只有Controller节点需要在Public网络宣传出去。
-Managent网络负责OpenStack集群内部的消息传输，所以Controller，Compute和Storage都需要在
-这个网络。Private用于虚拟机之间(私有网络)的流量，比如在不同的计算节点的虚拟机通信，所以Controller和
-Compute在Private网络里，Controller有一个虚拟路由器负责路由Private到Public的流量。Storage网络用于
-存储节点内部的分布式存储副本复制流量，只有Storage节点在这个网络里。Admin/PXE的网络限于部署操作系统
-和配置软件用，所有节点都需要在这个网络里面。分开各个网络为了考虑到安全和性能的需求，比如计算节点为了安全考虑
-不能直接从外面被访问，那如果只用一个网络就无法做这样的隔离，另外Storage网络对网络IO要求很高如果把他单独分开，可以
-将Storage网络放在高IO的网卡。
-
-在表\ref{tab:network-table}描述我们每个逻辑网络分配了什么VLAN和IP和相应的服务器网卡，通过例子可以荣理解
-网络的关系。表里的Tagged表示在服务器的网卡通过操作系统的支持打VLAN标，Native表示服务器的
-网卡不打VLAN标签但是包到交换机会打VLAN标签。每个服务器物理网卡只能有一个Native VLAN但是可以
-有多个Tagged VLANs，通过Tagged VLANs可以分配多个逻辑网络到一个网卡。
-Public使用白老师给我们分配的校园IP段和网关，其他网络都自己分配了RFC1918的私有网段。
-\begin{table}[h]
-  \centering
-  \begin{minipage}[t]{0.98\linewidth} % 如果想在表格中使用脚注，minipage是个不错的办法
-  \caption[私有云网络VLAN和IP分配]{私有云网络VLAN和IP分配}
-  \label{tab:network-table}
-    \begin{tabularx}{\linewidth}{lXXX}
-      \toprule[1.5pt]
-        名字 & vlan &  IP段 & 物理网卡\\
-        Public & 102 (Tagged)  & 166.111.80.16/28\newline GW: 166.111.80.10 & Eth1  \\
-        Management & 100 (Tagged)  & 192.168.150.0/24 & Eth1  \\
-        Private & 1000-1300 (Tagged) & 租户自己定义 & Eth1  \\
-        Storage & 101 (Tagged) & 192.168.151.0/24 & Eth0  \\
-        Admin/PXE & 105 (Native) & 10.20.0.20/24 & Eth0  \\
-      \bottomrule[1.5pt]
-    \end{tabularx}
-  \end{minipage}
-\end{table}
-
-难点在于交换机需要特殊配置，每个交换机到服务器的口是一个Trunk口，允许服务器自己打VLAN标签。
-在表\ref{tab:network-table}，可以看到我们用到了两个物理网卡，都是需要连到交换机，但是配置不一样。
-Eth0需要练到一个交换机一个Trunk口，配成允许101(Tagged)和Native VLAN 105。
-Eth1需要练到一个交换机一个Trunk口，配成允许100,102,1000-1300(Tagged)。
-学院提供了一台神州数码DCS-4500-26T交换机，有24个千兆口。因为Eth0和Eth1连到交换机的配置不一样，
-需要固定交换机的口，为了容易分别Eth0和Eth1的口我们把交换机分成两块，交换机口1到12属于eth0，
-交换机口13-24属于eth1。另外环境也需要跟校园网络集成，所以我们划分了一个交换机口，接入校园网络同时
-在校园网络打VLAN 102标签。在表\ref{tab:network-switch}可以看相应的交换机的配置。
-
-\begin{table}[h]
-  \centering
-  \begin{minipage}[t]{0.78\linewidth} % 如果想在表格中使用脚注，minipage是个不错的办法
-  \caption[私有云网络神舟数码交换机配置]{私有云网络神州数码交换机配置}
-  \label{tab:network-switch}
-    \begin{tabularx}{\linewidth}{lXXX}
-      \toprule[1.5pt]
-        交换机口 &   配置 \\
-        1-12 (Eth0) & switchport mode trunk\newline switchport trunk native vlan 105\newline switchport trunk allowed vlan 101  \\
-        13-24(Eth1) &  switchport mode trunk\newline switchport trunk allowed vlan 100,102;1000-1300 \\
-        26(校园介入) & switchport access vlan 102  \\
-      \bottomrule[1.5pt]
-    \end{tabularx}
-  \end{minipage}
-\end{table}
-
-\subsection{私有云总结}
-我们部署了一个7台服务器的OpenStack环境，详细描述了部署过程和细节，使可能别人重用我们的部署经验。
-我们的私有云环境也有活跃的用户，需要为他们维护部署的OpenStack环境，保证平台可用。在
-维护中我们也碰到了问题和修复问题，包含物理硬盘损坏，网线松了，Ceph卡死，等等。虽然有问题，
-我们还是认为OpenStack减少所有用户总体的维护成本。
+在图\ref{fig:computer-vision-library}描述在CloudVision机器视觉库实现的阶段，首先需要
+在数据集做预处理，然后在处理好的数据抽取特征，然后从特征描述子转码成图像表示，最后用图像表示
+和分类器分类数据。
+先介在章\ref{sec:storage_format}介绍所有算法用到的存储结构，
+了解到预处理的做法和结构怎么解决在大数据平台大量小文件问题。
+在章\ref{sec:feature-extraction}介绍分布式特征抽取算法的实现，
+介绍CloudVision提出的高效执行OpenCV的SIFT特征抽取方法。
+在章\ref{sec:image-representation}介绍分布式的词典学习和
+图像表示实现。
+在章\ref{sec:cloudvision_classifier}介绍分布式的SVM分类器，训练
+和分类实现。
 
 
+\section{存储结构}
+\label{sec:storage_format}
+CloudVision里面的程序经常需要读写数据集，中间结果和最终结果。
+为了统一化数据结果，CloudVision机器视觉库提出一个通用合适
+于大数据平台的数据结构。在分布式存储面对一个问题怎么
+高效读写图像数据，在章\ref{subsec:big-data-small-files}我们详细
+描述该问题同时提出两个解决方法。
+在章\ref{subsec:seq-file}详细介绍第一个方法，用Hadoop SequenceFile
+保存大量图像文件。在章\ref{subsec:parquet}介绍一个数据格式
+合适存算法的中间结果。
 
 
-\section{横向扩展性实验}
-\label{sec:scalability-experiment}
-这个实验的目标是了解到CloudVision云平台不同功能的扩展性。通过增加业务与处理层的计算节点，
-应该能看到一个线性的运行时间的减少。本实验使用了Caltech-256的数据集，里面
-有30607图片和256个类别，总体数据大小是1.2GB。
+\subsection{大数据大量小文件问题}
+\label{subsec:big-data-small-files}
+机器视觉数据集包括大量的图像，每个图像文件一般在10KB到200KB以内，
+直接存这些图像文件到HDFS或者Hadoop兼容文件系统存在性能和易用问题。
+回顾到章\ref{subsubsec:hdfs}的HDFS介绍，Hadoop存储方式把文件分成blocks，将每个
+block复制到多个datanode，默认的Block大小是128MB。如果
+直接保存图像文件到HDFS会造成，每个文件分成一个block，
+而且这个block没满。很多没满的block造成两个的问题：
+\begin{enumerate}
+  \item HDFS的Namenode内存容易满
 
-扩展性实验分析\ref{subsec:sift-scalability} SIFT特征抽取扩展性和\ref{subsec:bow-learning-scalability}
-BoW字典学习扩展性。两个实验同样从1台计算节点增加到4台计算节点，分析计算时间。
-每台计算服务器使用m1.large的配置，8 x 2.4Ghz vCPU，16GB内存，160GB本地硬盘。所有虚拟机共享一个
-1Gbps私有网络。
+        HDFS保存所有文件的元数据在Namenode的内存。如果保存海量
+        文件会造成Namnode内存用满。采用S3或者Swift对象存储没有
+        这个问题。
 
-\subsection{SIFT特征抽取扩展性实验}
-\label{subsec:sift-scalability}
-这个实验分析CloudVision实现的分布式SIFT特征抽取扩展性能力。
-首先为实验把Caltech-256的数据集做成一个1.2G的SequenceFile保存
-到OpenStack Swift对象存储。然后执行在\ref{sec:feature-extraction}描述CloudVision SIFT特征抽取实现，
-保存SIFT特征到OpenStack Swift。
+  \item 处理时候IO性能问题
+        
+        MapReduce和Spark的任务，读数据的时候会通过一次IO请求
+        读取一个block，将整个block执行用户提供map函数，执行任务。如果
+        每个block数据小，但是block很多，需要大量的处理任务造成大量的数据量小的IO请求。
+        HDFS和大部分对象存储的延迟比较高，因此大量传输大小小的IO请求造成
+        总体IO性能很差。
+\end{enumerate}
 
-测量方法是在业务与处理集群，直接在Mesos Master通过Linux命令
-提交Spark的任务，因为本实验不想考虑控制层的影响。
-我们测量Spark的SIFT特征抽取任务的计算时间，从提交Spark任务
-开始测量，Spark任务结束了停止时间测量。计算时间包括Spark和Mesos
-的调度和启动时间。
+
+通过包装多个图片到一个大文件，将大文件保存到HDFS或者对象存储，
+这样一个block会包括多个图像，可以解决上面两个问题。
+Hadoop的SequenceFile是一个可以包装多个二进制文件到一个大文件。
+目前在CloudVision通过两个方式解决高性能
+批量处理小文件的问题：SequenceFiles和
+Apache Parquet的存储格式。我们用SequenceFile作为
+图片存储，Parquet提供中间结果存储结构比如图片特征。
+
+
+\subsection{基于SequenceFile存储大量图片}
+\label{subsec:seq-file}
+Hadoop的SequenceFile格式使用Key/Value对保存数据，Key和Value支持
+多种数据类型，包括二进制类型。跟其他Key/Value数据结构不一样，
+SequenceFile不支持按Key寻找，编辑或者删除数据。SequenceFile只支持
+追加数据。SequenceFile有一个Header主要描述Key和Value数据类型和压缩配置，
+然后有Key/Value对数据记录。SequenceFile的好处是MapReduce或者Spark程序，
+可以并行读取SequenceFile的不同的block，提高并行处理性能。
+
+CloudVision使用SequenceFile保存大量的图片，Key是一个
+String用来保存图片文件名字，Value是一个Array[Bytes]用来保存
+图片的内容。
 
 \begin{figure}[h]
-  \captionsetup[subfigure]{aboveskip=2pt,belowskip=2pt}
   \centering
-  \begin{subfigure}[b]{0.49\textwidth}
-    \includegraphics[width=\textwidth]{sift_running_time}
-    \caption{Caltech-256数据集}
-    \label{fig:sift-running-time}
-  \end{subfigure}
-  \begin{subfigure}[b]{0.49\textwidth}
-    \includegraphics[width=\textwidth]{sift_running_time_10x}
-    \caption{10倍的Caltech-256数据集}
-    \label{fig:sift-running-time-10x}
-  \end{subfigure}
-  \caption{SIFT特征抽取计算时间}
-
+    \includegraphics[width=0.98\textwidth,trim=1 1 4 1,clip]{cloudvision-seqfile}
+  \caption{CloudVision 保存图片的SequenceFile格式和用法}
+  \label{fig:cloudvision-seqfile}
 \end{figure}
 
-在图\ref{fig:sift-running-time}可以看到在增加Spark计算计算节点情况下，
-SIFT特征抽取任务计算时间的变化。从图可以看到增加计算节点能提高性能，
-但是增加节点时候提高的性能不高。在用一个计算节点的时候使用了1279秒
-执行完任务，增加到两个计算点时候使用了1245秒，增加到
-三个计算节点使用了1147秒，最后增加到四个节点使用了800秒。
-这个提高性能的量是不理想，增加节点基能线性减少计算时间。
-假设$n$表示计算节点数量，$t_n$表示用$n$个节点的计算时间，
-$o$表示任务开销时间，
-那理想的$t_n$运算时间为定义
-\begin{equation} \label{eq:running-time}
-t_n = \frac{t_1}{n} + o
+在图\ref{fig:cloudvision-seqfile}有一个例子保存整个ImageNet2015数据集。
+黄色表示Key保存文件名字：1.jpg和蓝色表示图片的裸的bytes。SequenceFile可以有
+$N$个条目。
+
+为了容易让用户转换和上传数据集，CloudVision自开发了一个工具。
+在算法\ref{lst:uploadseqfile}提供了几行工具主要代码。
+工具的输入是一个图片目录和输出目录，它从图片目录读取所有
+文件文件名和内容，创建出来一个SequenceFile在输出目录，
+将每个图片文件保存到SequenceFile里。比如用户可以这样
+调用工具：
+upload\_to\_seqfile /home/sam/imagenet2014 swift://spark.swift/imagenet2014.hseq，
+会将用户本地/home/sam/imagenet2014图片目录上传到Swift的对象存储保存一个SequenceFile，
+Swift里面文件名是imagenet2014.hseq。
+
+\begin{lstlisting}[language=Java,
+                   basicstyle=\tiny,
+                   showstringspaces=false,
+                   caption={UploadToSequenceFile工具},
+                   label={lst:uploadseqfile}]
+Path outputPath = new Path(outputPath);
+writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(seqFilePath), 
+            SequenceFile.Writer.keyClass(Text.class),
+            SequenceFile.Writer.valueClass(BytesWritable.class));
+for (File file : imageFiles) {
+    byte buffer[] = Files.toByteArray(file);
+    writer.append(new Text(file.getName()), new BytesWritable(buffer));
+}
+writer.close();
+\end{lstlisting}
+
+在后续的Spark任务可以通过SparkContext.sequenceFile直接读取SequenceFile。
+Spark会自动把Key,Value Pairs做成一个RDD。在章\ref{sec:feature-extraction}
+会有详细的例子使用图片的SequenceFile抽取特征。
+
+\subsection{基于Parquet通用数据结构}
+\label{subsec:parquet}
+Parquet是提供一个通用的数据列式存储。列式存储
+按列保存数据，特别合适在批量处理使用。CloudVision
+主要用Parquet来保存所有处理的结果，比如从图片抽取的
+特征或者图像表示。
+在CloudVision选上了Parquet的原因有：
+\begin{itemize}
+  \item 通用性 \\
+        不同的处理平台都
+        支持Parquet的格式包含Spark, Hadoop Map/Reduce和Cascading。
+  \item 高效I/O \\
+        因为度数据的时候不需要扫描。Parquet列式存储底层使用blocks保存，
+        可以按整个block做一次IO请求读取block里面所有数据。另外可以
+        只选需要读取的列，降低需要读取的大小。
+  \item 高效压缩 \\
+        Parquet的压缩编码能减少存储使用的大小。
+  \item Spark SQL的DataFrame兼容性 \\
+        Spark natively支持Parquet的格式。通过Spark SQL可以直接
+        读取Parquet文件转成DataFrame，同样DataFrame可以直接
+        写成Parquet文件。
+\end{itemize}
+
+
+
+\section{特征抽取}
+\label{sec:feature-extraction}
+在章\ref{intro:image_features}我们介绍了主流的特征，基于深度学习的CNN特征在很多应用场景能达到最好的结果，
+但是SIFT还是最常用的人工特征。在机器视觉库，我们先实现了基于SIFT人工特征的特征抽取，
+在后续的版本也会支深度学习特征的抽取和模型学习。
+SIFT的局部特征算法有两部分，特征关键点检测和特征描述子。在关键点检测过程找出图像的关键点，然后
+将每个关键点使用特征描述算法计算出一个128维的描述向量。已经有多个开源软件实现SIFT算法，
+包括OpenCV，VLFeat，ImageJ和ezSIFT。OpenCV也支持很多其他人工特征包含SURF和其他图像处理的算法，
+因此我们选了集成OpenCV到CloudVision，使可能从Spark程序调用OpenCV，实现分布式SIFT特征抽取和OpenCV其他
+算法。
+
+在前期的调研，网上没找到材料教怎么在Spark怎么调用OpenCV，
+在自己实现过程也碰到了几个问题，可能这些问题造成晚上几乎没材料。
+从Spark调用OpenCV面对的问题：
+\begin{itemize}
+  \item 从Spark调用OpenCV问题 \\
+        Spark提供Java，Scala和Python的language bindings。OpenCV也提供C++，Java和Python的API。
+        需要考虑到哪个语言更合适还有在每个服务器装上OpenCV，保证Spark可以调用OpenCV的接口。
+        Java problem
+  \item 从SequenceFile高效读取图像到OpenCV需要格式的问题 \\
+        OpenCV一般从一个文件目录读取图像，在大数据结构所有图像在SequenceFile里面，读的时候直接把图像读到内存。
+        在网上的方式都先把图像写到一个暂时的文件然后从暂时文件读到OpenCV的图像Image class，但是这个方式带来Disk IO的平静。
+        我们需要高效从大数据数据结构读取图像到内存，将在内存里的图像直接用OpenCV抽取特征。
+  \item Spark的单任务开销 \\
+        每个Spark任务有开销，因此如果每个任务运行时间很段，这开销会显著，造成一个性能问题。
+\end{itemize}
+
+
+\begin{figure}[h]
+  \centering
+    \includegraphics[width=0.66\textwidth]{cloudvision-feature-extraction}
+  \caption{CloudVision在Spark集群特征抽取的方式。}
+  \label{fig:cloudvision-feature-extraction}
+\end{figure}
+通过描述CloudVision具体的基于Spark和OpenCV特征抽取方式，说明CloudVision怎么解决上面定义的问题。
+在开发过程中我们发现OpenCV的Java
+API不支持OpenCV Contrib，但是SIFT属于OpenCV Contrib的特征，因此在特征抽取我们用了Spark和OpenCV
+的Python接口。在用PySpark的时候碰了PYTHONPATH没有包含了OpenCV，但是通过调试与特殊配置解决了问题。
+
+在图\ref{fig:cloudvision-feature-extraction}可以看到简单化的Spark特征抽取程序的流程。
+第一步程序调用读取sequenceFile的函数，提供sequenceFile的目录和partition数，
+从Hadoop兼容文件系统读取SequenceFile，把SequenceFile划分到partitions，
+partition分布到Spark集群的executors的内存里。sequenceFile函数返回一个Spark的RRD object。
+
+第二布是用返回的RDD object的mapPartition函数，提供extractFeatures的作为mapPartition的函数。这样每个集群里
+的Spark Executor会在本地的partition执行extractFeatures函数。extractFeatures函数用OpenCV把图像
+转换图像特征。mapPartitions放回一个新的RDD，新的RDD数据有图像文件名字和图像特征。
+在算法\ref{lst:opencv-extract-features}可以看到extractFeatures的核心代码，
+特点在于从一个Python byte array转换到一个OpenCV的image，在第二行我们把
+在内存里的imgbytes转换成一个numpy.array叫nparr，第三行从nparr都城一个
+OpenCV的image object可以同来抽特征。在算法\ref{lst:opencv-extract-features}
+的代码描述了怎么高效从大数据结构化的数据抽取特征。
+\begin{lstlisting}[language=Python,
+                   basicstyle=\small,
+                   showstringspaces=false,
+                   caption={OpenCV从内存读取图像抽取特征},
+                   label={lst:opencv-extract-features}]
+imgfilename, imgbytes = imgfile_imgbytes
+nparr = np.fromstring(buffer(imgbytes), np.uint8)
+img = cv2.imdecode(nparr, 0)
+if feature_name in ["surf", "SURF"]:
+    extractor = cv2.SURF()
+elif feature_name in ["sift", "SIFT"]:
+    extractor = cv2.SIFT()
+kp, descriptors = extractor.detectAndCompute(img, None)
+return [(imgfilename, descriptors)]
+\end{lstlisting}
+
+第三步把特征的RDD写到持久存储。把Spark的RDD转换成一个Spark的DataFrame object，然后用DataFrame写到
+Hadoop兼容的文件系统，比如HDFS，S3或者Swift。DataFrame的结构使用图像名字作为地一个columnn，
+特征作为第二个column，特征是一个Array of Doubles。
+
+为了解决Spark单任务开销问题，我们在第二比使用了mapPartitions。在读取的时候保证每个partition包括
+多张图片。通过了解到数据集和服务器数量可以选择合适的partition数。定义为集群总体CPU核数为$c$，数据集
+大小用为$s$单元使用MB，推荐partition数为$p$，那通过在\ref{eq:partition_recommendation}的公式可以推荐partition数。
+\begin{equation} \label{eq:partition_recommendation}
+p = max(c * 3, \frac{s}{32})
 \end{equation}
-理想情况公式里$o$开销时间尽量少。
-在图\ref{fig:sift-running-time}，可以看到没有达到理想的情况，
-我们认为Spark的任务
-开销和写到Swift的Disk I/O造成$o$太大。
-
-为了了解到为什么计算时间在增加
-计算节点的时候没有按照在\ref{eq:running-time}定义的理想公式减少，
-我们重新执行了本次实验但是数据集比原来数据集大10倍。我们写了一个脚本
-复制Caltech-256的图像10次，将10倍大小的Caltech-256数据集做成一个
-SequenceFile上传到Swift，Caltech-256的SequenceFile大小是12GB。
-除了数据集大小其他参数和算法跟在图\ref{fig:sift-running-time}执行的实验一样，
-在图\ref{fig:sift-running-time-10x}可以看到在10倍大小Caltech-256数据集的跑实验的结果。
-跑实验过程中用一个计算节点的时候实验无法执行完成，因为Spark开始出Out of Memory异常，
-所以用一个计算节点没有记录数据。
-增加到两个计算节点使用了6124秒执行完成实验，增加到三个计算节点使用了4549秒，增加到四个计算节点使用了3729秒。
-我们认为在更大数据集才能看到横向扩展的优势，在图\ref{fig:sift-running-time-10x}可以看到增加计算节点按比例减少计算时间。
-我们猜测某些算法在数据集小的情况下，收到集群处理的性能开销影响，造成横向扩展性好处并不大。
-集群开销包括从Swift读取数据集，调度与开启Spark任务，集群内数据传送，把结果写到持久数据。
+如果数据集小，会按照CPU核数推荐partition数，在数据集大但是CPU核数小的情况还是保证每个partition不会大于32MB。
 
 
 
+\section{特征编码与图像表示}
+\label{sec:image-representation}
+在章\ref{subsubsec:feature-encoding}我们介绍了BoW, Fisher Vector和VLAD的特征转码与图像表示的方法。
+介绍的特装转码与图像表示方法同样都有一个Visual Dictionary（词典）学习过程，BoW使用KMeans学习，
+Fisher Vector使用Gausian Mixture Model(GMM)学习，VLAD可以选使用KMeans或者GMM学习。
+学习词典后，用词典分配每个特征描述子的点到一个codeword（码字），这过程叫Feature Encoding（特征转码），然后通过
+pooling把所有点计算在一起得到一个图像表示。
 
-\subsection{BoW字典学习扩展性实验}
-\label{subsec:bow-learning-scalability}
-本实验同样为了测试CloudVision的横向扩展性，执行BoW字典学习的应用测量在不同计算节点数的计算时间。
-在章\ref{subsec:sift-scalability}SIFT特征抽取扩展性实验
-我们发现横线扩展性有限，认为集群处理开销的读写时间是一个重要的因素。因此本实验测试
-一个没有写大量的数据算法，BoW字典学习使用KMeans学习出来模型，
-算法的结果只是一个KMeans模型，描述$K$个聚类中心。
+为了演示特征编码与图像表示过程，CloudVision实现了BoW + Sum pooling的特征转码与图像表示，
+主要原因其他方法是基于BoW的改进而且实现相对复杂。在章\ref{subsec:dict-learning}介绍CloudVision
+BoW词典学习的实现方法，然后在章\ref{subsec:feature-encoding}介绍CloudVision的BoW特征转码与pooling
+实现方法。
 
-KMeans训练时间复杂度为$O(n * K * I *d)$，这里$n$是数据集的大小，
-$K$是聚类个数，$I$是迭代个数，$d$是数据集维度。我们训练的BoW选的
-$K = 2000$，另外数据集使用了在\ref{subsec:sift-scalability}在Caltech-256抽取的SIFT特征描述子。
-BoW字典学习第一步把SIFT特征从Swift读到Spark的RDD内存变量。然后迭代的执行KMeans训练算法，
-执行完了把模型保存到持久存储。
+\subsection{词典学习}
+\label{subsec:dict-learning}
+BoW词典学习使用KMeans聚类算法找出数据集的类似的点。KMeans找出的$K$个类据，每个聚类
+描述一个codeword（码字）。
+假设使用SIFT特征生产词典，会找出$K$个128维度的向量，每个向量表示一个码字。
+CloudVision实现的KMeans词典学习方式支持多种特征不限于128维度的数据集。
+
+在写词典学习的程序中面对了两个问题。第一，KMeans是一个迭代算法如果每次
+重新读取或者计算特征会带来性能瓶颈。第二，Spark MLlib的KMeans算法
+不能直接用在一个X x 128的矩阵，需要换成一样大小的响亮。
+% optionally add picture of learning algorithm
+
+CloudVision词典学习过程序需要提供几个参数：选词典的大小$K$，特征文件目录，最大迭代数，KMeans模型目录。
+执行CloudVision字典学习程序会在提供特征文件目录的数据找出$K$个类的词典，如果没有找到局部最优最多会迭代用户
+提供的最大迭代数。在算法\ref{lst:kmeans-dictionary}列出了CloudVision字典学习核心代码，
+第一行分布式读取特征到Spark集群的每台executor，第二行用flatMap获取features列子和把X x Y的的矩阵变成X个1 x Y的向量然后缓存到Spark内存，
+第三行用Spark MLlib提供的分布式KMeans算法找出K个聚类，第五行保存结构到分布式存储。
+\begin{lstlisting}[language=Python,
+                   basicstyle=\small,
+                   showstringspaces=false,
+                   numbers=left,
+                   caption={词典学习核心代码},
+                   label={lst:kmeans-dictionary}]
+features = sqlContext.read.parquet(feature_parquet_path)
+flattened_features = features.flatMap(lambda x: x['features']).cache()
+model = KMeans.train(flattened_features, k, maxIterations=maxIter,
+                     initializationMode="random")
+model.save(sc, kmeans_model_path)
+\end{lstlisting}
+第二行的代码解决上面定义的两个问题，通过Spark RDD的cache函数缓存到内存决迭第一个代算法瓶颈问题，
+通过flatMap转换一样大小响亮解决第二个问题。
+
+
+\subsection{特征转码与pooling}
+\label{subsec:feature-encoding}
+学了词典以后我们可以用它把图像的特征转码成最终图像表示。
+CloudVision目前实现了最简单的基于BoW特征转码然后用Sum pooling作出直方图。
+这个过程把每个特征关键点的描述子分配到字典里的一个码字，
+然后通过sum pooling统计一个1 x $K$个向量叫BoW图像表示。
+BoW表示向量指数表示第$K$个码字在图像出现了多少次，
+BoW表示是码字的直方图。
+
+在CloudVision的特征转码与pooling面对了一个值得提的问题，
+如果分布式在每个Spark executor执行特征转码都需要同一个字典，
+这个词典每次从Hadoop兼容文件系统读取变成了一个IO性能瓶颈。
+下面介绍CloudVision特征转码用到Spark的broadcast功能解决此问题。
+
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=0.66\textwidth]{bow_running_time}
-  \caption{BoW字典学习计算时间}
-  \label{fig:bow-running-time}
+    \includegraphics[width=0.66\textwidth]{cloudvision-feature-encoding}
+  \caption{CloudVision在Spark集群实现BoW特征转码与表示。}
+  \label{fig:cloudvision-feature-encoding}
 \end{figure}
+在图\ref{fig:cloudvision-feature-encoding}可以看到基于Spark分布式方式
+实现特征转码与表示。第一步从Hadoop兼容存储读取Parquet格式的图像的特征和KMeans model，这里KMeans model
+是在章\ref{subsec:dict-learning}学习的词典(Visual Codebook)。因为每个执行特征转码的Spark Executor都需要
+用这个词典，我们一次性通过Spark Broadcast变量把词典提前播放的每个Spark Executor的内存，避免每个节点单独从Hadoop
+兼容文件系统读取词典。\cite{spark-programming-guide}
 
-在图\ref{fig:bow-running-time}可以看到BoW字典学习的计算时间。
-这里计算时间单元使用分钟，SIFT抽取实验计算时间单元使用了秒。
-从实验结果可以看出来，BoW词典学习支持横向扩展，增加计算节点
-能按照在\ref{eq:running-time}定义的公式线性减少运行时间。
-我们认为词典学习的Disk IO开销比抽SIFT特征少，另外迭代的时候
-使用Spark内部缓存数据集。
+有了词典可以高效分布式执行特征转码过程，使用Spark分布式map操作执行
+BoW表示函数，BoW函数把每个图像特征矩阵变成一个1 x $K$个响亮表示码字的直方图。
+在算法\ref{lst:feature-encoding}可以看到BoW函数核心代码。
+第一行建立Spark KMeansModel。第二行建立一个1 x $K$的向量用来保存BoW表示。
+第三行建立一个循环遍历特征描述矩阵的每个关键点描述子。
+第四行用词典找出离关键点最近的码字。第六行在BoW表示向量
+增加相应的码字的个数。
+\begin{lstlisting}[language=Python,
+                   basicstyle=\small,
+                   numbers=left,
+                   showstringspaces=false,
+                   caption={BoW特征转码核心代码},
+                   label={lst:feature-encoding}]
+model = KMeansModel(dictionary)
+bow = np.zeros(len(dictionary))
+for keypoint_descriptor in feature_matrix:
+    k = model.predict(keypoint_descriptor)
+    if pooling = "sum":
+        bow[k] += 1
+return bow
+\end{lstlisting}
 
-\section{内存缓存性能对比实验}
-\label{sec:memory-cache-experiment}
-这个实验的目标是了解到CloudVision云平台的Alluxio内存缓存带来的性能。通过执行每个CloudVision机器视觉库的应用两次，
-第一次输入和输出都保存到Alluxio内存缓存，第二次输入和输出都保存在集群外的Swift，这样对比每个应用的计算时间。
-我们预测机器视觉库里的读写和计算比率大的应用能看到性能提高。
-实验也使用了Caltech-256的数据集，里面
-有30607图片和256个类别，总体数据大小是1.2GB。
+所有图像map到了图像表示后，使用Parquet格式保存保存到Hadoop兼容的文件系统。这个过程
+会分布式从每个Spark executor同时写本地处理的BoW表示写到持久存储。
 
-缓存对比实验分析视觉库的五个应用：SIFT特征抽取(SIFT)，BoW字典学习(BoW.L)，SIFT转换BoW图像表示(BoW.A)，
-分类器训练（Class.L），分类器分类（Class.P）。每个应用跑两次对比使用Alluxio内存换春和没有用Alluxio的
-计算时间。
-实验使用4台计算节点处理集群，
-每台计算服务器使用m1.large的配置，8 x 2.4Ghz vCPU，16GB内存，160GB本地硬盘。所有虚拟机共享一个
-1Gbps私有网络。
+
+\section{分类器}
+\label{sec:cloudvision_classifier}
+CloudVision实现了主流的SVM分类其，这里说明分布式实现方式和碰到的问题。
+在章\ref{subsubsec:classifier}介绍了多个分类器，但是发现SVM是最常用。
+无论在人工特征或者深度学习的特征SVM都可以达到最先进的结果。
+所有监督机器学习都采用一个学习过程，学习用有标签的数据训练出来一个模型，有了模型后才可以用
+它类未标签的数据。
+
+
+Spark的MLlib已经包括一个binary(single class) SVM分布式分类器实现，
+为了不要重复发明轮子CloudVision基于MLlib现有SVM实现开发。
+在基于Spark MLlib的SVM开发面对了两个问题：
+\begin{itemize}
+  \item Spark MLlib只提供binary(single) classifier SVM不符合多数机器视觉应用场景。Binary SVM限于分类两种类型，
+        但是大部分的机器视觉场景有超过两个类型的分类需求。
+  \item 基于Spark MLlib监督机器学习算法需要用它定义的格式，训练数据需要是一个Spark LabeledPoint类型的RDD。
+        需要分布式预处理特征BoW表示数据。
+\end{itemize}
+
+CloudVision分类器使用Scala实现，因为Scala可以更紧密的扩展MLlib原有的机器学习方法。
+为了训练分类器先需要预处理数据，在本章\ref{subsec:classifier-preprocessing}描述CloudVision分类器预处理数据(preprocessing)的实现方法，
+解决需要符合Spark MLlib格式数据的问题。然后在\ref{subsec:classifier-training}介绍基于处理好的训练数据训练多类别分布式SVM训练实现方法。
+在图\ref{fig:cloudvision-classifier}可以看到预处理和多类别SVM的实现方式。
+训练完了可以用多类别的SVM模型分类无知类别的数据，在\ref{subsec:classifier-label}描述CloudVision多类别SVM分类的实现。
 
 \begin{figure}[h]
   \centering
-    \includegraphics[width=0.66\textwidth]{alluxio_comparison}
-  \caption{Alluxio跟没有Alluxio的性能对比}
-  \label{fig:alluxio-comparison}
+    \includegraphics[width=0.60\textwidth]{cloudvision-classifier}
+  \caption{CloudVision预处理和训练分类器实现}
+  \label{fig:cloudvision-classifier}
 \end{figure}
 
-在图\ref{fig:alluxio-comparison}可以看到Alluxio和没有Alluxio的性能对比，每个应用的计算时间
-是表示Alluxio和没有Alluxio计算时间的比率。第一个应用SIFT特征抽(SIFT)，使用Alluxio可以提高性能，
-但是提高没有预测到的提高多，在分析节点的状态发现大部分时间在于CPU计算，所以读写只是应用
-的一个小部分，因此用Alluxio能提高系能到17\%左右。第二个应用从SIFT特征描述子学习BoW的词典(BoW.L)，
-这个应用没有提高性能，其实计算时间还更高，原因是因为迭代算法主要花时间在计算，读写时间微不足道。
-第三个应用用词典转换SIFT特征描述子到BoW图像表示(BoW.A)，这里的性能提高很明显，
-用Alluxio能提高性能63\%左右，我们认为原因是读写和计算比率高。第四个应用使用BoW图像表示和数据集标签
-训练分类器，用Alluxio能提高性能6\%左右，我们认为原因是读写和计算时间比率低，应用大部分时候在算Gradient Descent。
-第五个应用使用训练的分类器，分类数据集的测试集，用Alluxio能提高性能39\%左右，
-原因是分类计算要求不高，因此读写和计算比率相对高。
+
+
+\subsection{数据预处理}
+\label{subsec:classifier-preprocessing}
+数据预处理需要从数据集获取类别ID和特征表示，组成一个Spark的LabeledPoint。
+Spark的LabeledPoint格式需要两个变量：类别ID(label)和特征向量(features)。
+类别ID的变量数据类型是Double，必须从零开始算每个整数表述一个独立的类别。
+特征向量变量的数据类型是Spark的org.apache.spark.mllib.linalg.Vector。
+
+从数据集获取类别ID，在多数数据集可以使用图像文件名字，
+比如在Caltech-256数据集每个图像文件名的格式是\{classid\}\_\{imgid\}.jpg，
+这样可以通过一个regex(正则表达式)从文件名找出类型，
+在Caltech256可以用这个正则表达式\verb|(\d+)_\d+.jpg|
+取出类型ID。
+
+在图\ref{fig:cloudvision-classifier}可以看到预处理实现方式，
+先从Hadoop兼容文件系统读取BoW特征向量和文件名字的DataFrame。
+然后通过一个分布式map操作，用上面描述的方式把文件名字和BoW变成
+一个RDD of LabeledPoint。
+
+
+
+\subsection{训练}
+\label{subsec:classifier-training}
+训练多类别的SVM分类器方法是每个类别独立训练一个二类分类器。
+假设有$N$个类别，那需要训练$1..N$个二类（binary）SVM分类器。
+在训练第$i$个列别的时候，先需要把数据集里所有不等于$i$的类别设置为$0$，
+然后将数据集里所有等于$i$的列别设置为$1$。这样我们把问题变成一个
+普通的二类SVM分类器问题。在图\ref{fig:cloudvision-classifier}可以但到最后部分训练的过程。
+在算法\ref{lst:classifier-training}是用pseudocode描述实现方式。
+\begin{lstlisting}[language=Python,
+                   basicstyle=\small,
+                   numbers=left,
+                   showstringspaces=false,
+                   caption={SVM多类别分类器训练pseudocode},
+                   label={lst:classifier-training}]
+svm_classifiers = []
+for classid in classes:
+    binary_label_features = features_bow.map(to_binary_label)
+    svm_classifiers.append(SVMWithSGD.train(binary_label_features))
+\end{lstlisting}
+
+
+
+\subsection{分类}
+\label{subsec:classifier-label}
+分类过程把无知类别的数据填上类别。多类别SVM分类器，使用$N$个类别的二类分类器
+，这$N$个分类器是基于\ref{subsec:classifier-training}训练的，
+$N$个列别的分类器中得分最高的分类器是预测到的类别。
+\begin{lstlisting}[language=Python,
+                   basicstyle=\small,
+                   numbers=left,
+                   showstringspaces=false,
+                   caption={SVM多类别分类器分类pseudocode},
+                   label={lst:classifier-training}]
+scores = []
+for classifier in svm_classifiers:
+    score, classid = classifier.predict(features_bow)
+    scores.append( (score, classid) )
+
+return scores.sortByScore.getFirst.getClassid
+\end{lstlisting}
+
+
+
+
