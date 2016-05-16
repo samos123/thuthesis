@@ -1,47 +1,47 @@
 \chapter{CloudVision分布式机器视觉库}
 \label{cha:distributed_vision_library}
 本章介绍CloudVision实现的分布式机器视觉的算法，
-这些算法作为CloudVision的核心分布式机器视觉算法库。
-用户可以通过CloudVision的控制与管理层，直接提交
+这些算法是CloudVision的核心分布式机器视觉算法库。
+用户可以通过CloudVision的控制管理层，直接提交
 器视觉库的任务。另外机器视觉库作为一个参考实现，让
-用户更深了解怎么写自己的CloudVision分布式机器视觉的程序。
+用户更深入地了解怎么实现自己的CloudVision分布式机器视觉程序。
 
 \begin{figure}[h]
   \centering
     \includegraphics[width=0.99\textwidth]{computer-vision-library}
-  \caption{CloudVision分布式机器视觉库实现的阶段}
+  \caption{CloudVision分布式机器视觉库实现过程}
   \label{fig:computer-vision-library}
 \end{figure}
-在图\ref{fig:computer-vision-library}描述在CloudVision机器视觉库实现的阶段，首先需要
-在数据集做预处理，然后在处理好的数据抽取特征，然后从特征描述子转码成图像表示，最后用图像表示
+图\ref{fig:computer-vision-library}描述CloudVision机器视觉库实现的过程。首先需要
+将数据集做预处理，然后对处理好的数据做抽取特征，第三从特征描述子转码成图像表示，最后用图像表示
 和分类器分类数据。
-先介在章\ref{sec:storage_format}介绍所有算法用到的存储结构，
-了解到预处理的做法和结构怎么解决在大数据平台大量小文件问题。
-在章\ref{sec:feature-extraction}介绍分布式特征抽取算法的实现，
+章节\ref{sec:storage_format}介绍所有算法用到的存储结构，
+了解预处理的做法和结构，怎么解决在大数据平台大量小文件的问题。
+章节\ref{sec:feature-extraction}介绍分布式特征抽取算法的实现，
 介绍CloudVision提出的高效执行OpenCV的SIFT特征抽取方法。
-在章\ref{sec:image-representation}介绍分布式的词典学习和
+章节\ref{sec:image-representation}介绍分布式的词典学习和
 图像表示实现。
-在章\ref{sec:cloudvision_classifier}介绍分布式的SVM分类器，训练
+章节\ref{sec:cloudvision_classifier}介绍分布式的SVM分类器，训练
 和分类实现。
 
 
 \section{存储结构}
 \label{sec:storage_format}
 CloudVision里面的程序经常需要读写数据集，中间结果和最终结果。
-为了统一化数据结果，CloudVision机器视觉库提出一个通用合适
-于大数据平台的数据结构。在分布式存储面对一个问题怎么
+为了统一化数据结果，CloudVision机器视觉库提出一个通用的合适
+于大数据平台的数据结构。分布式存储面对一个问题是怎么
 高效读写图像数据，在章\ref{subsec:big-data-small-files}我们详细
-描述该问题同时提出两个解决方法。
+描述该问题，并提出两个解决方法。
 在章\ref{subsec:seq-file}详细介绍第一个方法，用Hadoop SequenceFile
-保存大量图像文件。在章\ref{subsec:parquet}介绍一个数据格式
-合适存算法的中间结果。
+保存大量图像文件。在章\ref{subsec:parquet}介绍一个
+合适存算法的中间结果的数据格式。
 
 
 \subsection{大数据大量小文件问题}
 \label{subsec:big-data-small-files}
 机器视觉数据集包括大量的图像，每个图像文件一般在10KB到200KB以内，
 直接存这些图像文件到HDFS或者Hadoop兼容文件系统存在性能和易用问题。
-回顾到章\ref{subsubsec:hdfs}的HDFS介绍，Hadoop存储方式把文件分成blocks，将每个
+回顾章\ref{subsubsec:hdfs}的HDFS介绍，Hadoop存储方式把文件分成blocks，将每个
 block复制到多个datanode，默认的Block大小是128MB。如果
 直接保存图像文件到HDFS会造成，每个文件分成一个block，
 而且这个block没满。很多没满的block造成两个的问题：
@@ -55,16 +55,16 @@ block复制到多个datanode，默认的Block大小是128MB。如果
   \item 处理时候IO性能问题
         
         MapReduce和Spark的任务，读数据的时候会通过一次IO请求
-        读取一个block，将整个block执行用户提供map函数，执行任务。如果
-        每个block数据小，但是block很多，需要大量的处理任务造成大量的数据量小的IO请求。
-        HDFS和大部分对象存储的延迟比较高，因此大量传输大小小的IO请求造成
+        读取一个block，对整个block执行用户提供的函数。如果
+        每个block数据小，但是block很多，需要大量地处理任务，造成大量的数据量小的IO请求。
+        HDFS和大部分对象存储的延迟比较高，因此大量传输小的IO请求造成
         总体IO性能很差。
 \end{enumerate}
 
 
 通过包装多个图片到一个大文件，将大文件保存到HDFS或者对象存储，
 这样一个block会包括多个图像，可以解决上面两个问题。
-Hadoop的SequenceFile是一个可以包装多个二进制文件到一个大文件。
+Hadoop的SequenceFile可以包装多个二进制文件到一个大文件。
 目前在CloudVision通过两个方式解决高性能
 批量处理小文件的问题：SequenceFiles和
 Apache Parquet的存储格式。我们用SequenceFile作为
@@ -73,15 +73,15 @@ Apache Parquet的存储格式。我们用SequenceFile作为
 
 \subsection{基于SequenceFile存储大量图片}
 \label{subsec:seq-file}
-Hadoop的SequenceFile格式使用Key/Value对保存数据，Key和Value支持
-多种数据类型，包括二进制类型。跟其他Key/Value数据结构不一样，
+Hadoop的SequenceFile格式使用Key/Value保存数据。Key和Value支持
+多种数据类型，包括二进制类型。跟其他Key/Value数据结构不同，
 SequenceFile不支持按Key寻找，编辑或者删除数据。SequenceFile只支持
 追加数据。SequenceFile有一个Header主要描述Key和Value数据类型和压缩配置，
-然后有Key/Value对数据记录。SequenceFile的好处是MapReduce或者Spark程序，
+然后由Key/Value记录实际数据。SequenceFile的好处是MapReduce或者Spark程序，
 可以并行读取SequenceFile的不同的block，提高并行处理性能。
 
 CloudVision使用SequenceFile保存大量的图片，Key是一个
-String用来保存图片文件名字，Value是一个Array[Bytes]用来保存
+String用来保存图片文件名字，Value是一个Array[Bytes]用于保存
 图片的内容。
 
 \begin{figure}[h]
@@ -91,18 +91,18 @@ String用来保存图片文件名字，Value是一个Array[Bytes]用来保存
   \label{fig:cloudvision-seqfile}
 \end{figure}
 
-在图\ref{fig:cloudvision-seqfile}有一个例子保存整个ImageNet2015数据集。
-黄色表示Key保存文件名字：1.jpg和蓝色表示图片的裸的bytes。SequenceFile可以有
+图\ref{fig:cloudvision-seqfile}是保存整个ImageNet2015数据集的例子。
+黄色表示Key保存文件名字,蓝色表示图片的内容，以字节数组表示。SequenceFile可以有
 $N$个条目。
 
-为了容易让用户转换和上传数据集，CloudVision自开发了一个工具。
+为了让用户容易转换和上传数据集，CloudVision自开发了一个工具。
 在算法\ref{lst:uploadseqfile}提供了几行工具主要代码。
 工具的输入是一个图片目录和输出目录，它从图片目录读取所有
-文件文件名和内容，创建出来一个SequenceFile在输出目录，
-将每个图片文件保存到SequenceFile里。比如用户可以这样
+文件的文件名和内容，
+将每个图片文件保存到SequenceFile里，并保存到输出目录。比如用户可以这样
 调用工具：
 upload\_to\_seqfile /home/sam/imagenet2014 swift://spark.swift/imagenet2014.hseq，
-会将用户本地/home/sam/imagenet2014图片目录上传到Swift的对象存储保存一个SequenceFile，
+会将用户本地/home/sam/imagenet2014目录下的所有图片内容，输出到Swift对象存储下的一个SequenceFile，
 Swift里面文件名是imagenet2014.hseq。
 
 \begin{lstlisting}[language=Java,
@@ -123,12 +123,12 @@ writer.close();
 
 在后续的Spark任务可以通过SparkContext.sequenceFile直接读取SequenceFile。
 Spark会自动把Key,Value Pairs做成一个RDD。在章\ref{sec:feature-extraction}
-会有详细的例子使用图片的SequenceFile抽取特征。
+详细介绍怎么使用图片的SequenceFile抽取特征。
 
 \subsection{基于Parquet通用数据结构}
 \label{subsec:parquet}
 Parquet是提供一个通用的数据列式存储。列式存储
-按列保存数据，特别合适在批量处理使用。CloudVision
+按列保存数据，特别合适批量处理使用。CloudVision
 主要用Parquet来保存所有处理的结果，比如从图片抽取的
 特征或者图像表示。
 在CloudVision选上了Parquet的原因有：
@@ -137,13 +137,13 @@ Parquet是提供一个通用的数据列式存储。列式存储
         不同的处理平台都
         支持Parquet的格式包含Spark, Hadoop Map/Reduce和Cascading。
   \item 高效I/O \\
-        因为度数据的时候不需要扫描。Parquet列式存储底层使用blocks保存，
+        因为读数据的时候不需要扫描。Parquet列式存储底层使用blocks保存，
         可以按整个block做一次IO请求读取block里面所有数据。另外可以
         只选需要读取的列，降低需要读取的大小。
   \item 高效压缩 \\
         Parquet的压缩编码能减少存储使用的大小。
   \item Spark SQL的DataFrame兼容性 \\
-        Spark natively支持Parquet的格式。通过Spark SQL可以直接
+        Spark原生地支持Parquet格式。通过Spark SQL可以直接
         读取Parquet文件转成DataFrame，同样DataFrame可以直接
         写成Parquet文件。
 \end{itemize}
@@ -153,16 +153,16 @@ Parquet是提供一个通用的数据列式存储。列式存储
 \section{特征抽取}
 \label{sec:feature-extraction}
 在章\ref{intro:image_features}我们介绍了主流的特征，基于深度学习的CNN特征在很多应用场景能达到最好的结果，
-但是SIFT还是最常用的人工特征。在机器视觉库，我们先实现了基于SIFT人工特征的特征抽取，
-在后续的版本也会支深度学习特征的抽取和模型学习。
+但是SIFT还是最常用的人工特征。我们目前实现了基于SIFT人工特征的特征抽取，
+在后续的版本也会支持深度学习特征的抽取和模型学习。
 SIFT的局部特征算法有两部分，特征关键点检测和特征描述子。在关键点检测过程找出图像的关键点，然后
 将每个关键点使用特征描述算法计算出一个128维的描述向量。已经有多个开源软件实现SIFT算法，
-包括OpenCV，VLFeat，ImageJ和ezSIFT。OpenCV也支持很多其他人工特征包含SURF和其他图像处理的算法，
-因此我们选了集成OpenCV到CloudVision，使可能从Spark程序调用OpenCV，实现分布式SIFT特征抽取和OpenCV其他
+包括OpenCV，VLFeat，ImageJ和ezSIFT。OpenCV也支持很多其他人工特征,比如SURF和其他图像处理的算法，
+因此我们选择集成OpenCV到CloudVision。目标是从Spark程序调用OpenCV，实现分布式SIFT特征抽取和OpenCV的其他
 算法。
 
-在前期的调研，网上没找到材料教怎么在Spark怎么调用OpenCV，
-在自己实现过程也碰到了几个问题，可能这些问题造成晚上几乎没材料。
+在前期的调研，网上没找到材料教怎么在Spark怎么调用OpenCV。
+在自己实现过程也碰到了几个问题，可能这些问题造成网上几乎没有这方面材料。
 从Spark调用OpenCV面对的问题：
 \begin{itemize}
   \item 从Spark调用OpenCV问题
@@ -171,14 +171,14 @@ SIFT的局部特征算法有两部分，特征关键点检测和特征描述子�
         需要保证Spark的每个计算节点能够调用相应的OpenCV接口。在实现过程中我们发现Java的接口不全，
         OpenCV-contrib没有相应的Java接口，因此如果用Java没有提供SIFT特征抽取的接口。OpenCV官方
         在Github确认了存在这个问题。
-  \item 从SequenceFile高效读取图像到OpenCV需要格式的问题
+  \item 从SequenceFile高效读取图像到OpenCV需要格式转换的问题
 
         OpenCV一般从一个文件目录读取图像，在大数据结构所有图像在SequenceFile里面，读的时候直接把图像读到内存。
-        在网上的方式都先把图像写到一个暂时的文件然后从暂时文件读到OpenCV的图像Image class，但是这个方式带来Disk IO的平静。
+        在网上的方式都先把图像写到一个暂时的文件然后从暂时文件读到OpenCV的图像Image class，但是这个方式带来Disk IO的瓶颈。
         我们需要高效从大数据数据结构读取图像到内存，将在内存里的图像直接用OpenCV抽取特征。
   \item Spark的单任务开销
 
-        每个Spark任务有开销，因此如果每个任务运行时间很段，这开销会显著，造成一个性能问题。
+        启动每个Spark任务有开销，因此如果每个任务运行时间很短，这个开销会很显著，造成一个性能问题。
 \end{itemize}
 
 \subsection*{算法实现}
@@ -215,13 +215,13 @@ SIFT的局部特征算法有两部分，特征关键点检测和特征描述子�
         从Hadoop兼容文件系统读取SequenceFile，把SequenceFile划分到partitions，
         partition分布到Spark集群的executors的内存里。sequenceFile函数返回一个Spark的RRD object。
 
-        第二步是用返回的RDD object的mapPartition函数，提供extractFeatures的作为mapPartition的函数。这样每个集群里
+        第二步用返回的RDD object的mapPartition函数，提供extractFeatures的作为mapPartition的函数。这样每个集群里
         的Spark Executor会在本地的partition执行extractFeatures函数。extractFeatures函数用OpenCV把图像
         转换图像特征。mapPartitions放回一个新的RDD，新的RDD数据有图像文件名字和图像特征。
         在算法\ref{lst:opencv-extract-features}可以看到extractFeatures的核心代码，
         特点在于从一个Python byte array转换到一个OpenCV的image，在第二行我们把
-        在内存里的imgbytes转换成一个numpy.array叫nparr，第三行从nparr都城一个
-        OpenCV的image object可以同来抽特征。在算法\ref{lst:opencv-extract-features}
+        在内存里的imgbytes转换成一个numpy.array叫nparr，第三行从nparr生成一个
+        OpenCV的image object可以用来抽取特征。在算法\ref{lst:opencv-extract-features}
         的代码描述了怎么高效从大数据结构化的数据抽取特征。
         \begin{minipage}{\linewidth}
         \begin{lstlisting}[language=Python,
@@ -248,13 +248,13 @@ SIFT的局部特征算法有两部分，特征关键点检测和特征描述子�
 
   \item 输出
 
-        程序的输出是一个Parquet文件，里面有两列：图像名字和特征描述子响亮，
+        程序的输出是一个Parquet文件，里面有两列：图像名字和特征描述子向量，
         每一行表示一张图像。程序会在用户提供的存储位置保存此Parquet文件。
 
 \end{itemize}
 
 为了解决Spark单任务开销问题，我们在第二步使用了mapPartitions。在读取的时候保证每个partition包括
-多张图片。通过了解到数据集和服务器数量可以选择合适的partition数。定义为集群总体CPU核数为$c$，数据集
+多张图片。根据数据集和服务器数量，可以计算合适的partition数。定义集群总体CPU核数为$c$，数据集
 大小用为$s$单元使用MB，推荐partition数为$p$，那通过在\ref{eq:partition_recommendation}的公式可以推荐partition数。
 \begin{equation} \label{eq:partition_recommendation}
 p = max(c * 3, \frac{s}{32})
@@ -267,11 +267,11 @@ p = max(c * 3, \frac{s}{32})
 \label{sec:image-representation}
 在章\ref{subsubsec:feature-encoding}我们介绍了特征转码和图像表示算法，
 图像表示比直接原生的特征可以更好的抽象物体的特性。所以在图像分类应用中，
-经常会采用特装转码和图像表示的算法。
+经常会采用特征转码和图像表示的算法。
 
 最经典算法是在章\ref{subsubsec:feature-encoding}
-介绍机器视觉的BoW特装转码和表示算法，其他GMM和VLAD算法使用
-BoW的思想。此算法首先都得基于数据集生产一个Visual Dictionary(词典），
+介绍机器视觉的BoW特征转码和表示算法，其他GMM和VLAD算法使用
+BoW的思想。该算法首先基于数据集生产一个Visual Dictionary(词典），
 词典抽象图像的特点叫码字(visual codeword)，一般使用无监督机器学习算法生产词典，比如KMeans
 聚类算法或者GMM算法。这第一步生产词典叫做
 词典学习，第二步使用词典从图像特征转码成图像表示，不同算法
@@ -279,7 +279,7 @@ BoW的思想。此算法首先都得基于数据集生产一个Visual Dictionary
 
 本章描述CloudVision库的分布式BoW特征转码
 与表示实现，
-选择实现BoW算法原因是其他方法是基于BoW的改进而且实现相对复杂。在章\ref{subsec:dict-learning}介绍CloudVision
+选择实现BoW算法原因是其他方法是基于BoW的改进，而且实现相对复杂。在章\ref{subsec:dict-learning}介绍CloudVision
 BoW词典学习的实现方法，然后在章\ref{subsec:feature-encoding}介绍CloudVision的BoW特征转码
 实现方法。
 
@@ -288,11 +288,11 @@ BoW词典学习的实现方法，然后在章\ref{subsec:feature-encoding}介绍
 BoW词典学习使用KMeans聚类算法找出数据集的类似的点。KMeans找出的$K$个类据，每个聚类
 描述一个codeword（码字）。
 假设使用SIFT特征生产词典，会找出$K$个128维度的向量，每个向量表示一个码字。
-CloudVision实现的KMeans词典学习方式支持多种特征不限于128维度的数据集。
+CloudVision实现的KMeans词典学习方式支持多种特征，不限于128维度的数据集。
 
 在写词典学习的程序中面对了两个问题。第一，KMeans是一个迭代算法如果每次
 重新读取或者计算特征会带来性能瓶颈。第二，Spark MLlib的KMeans算法
-不能直接用在一个X x 128的矩阵，需要换成一样大小的响亮。
+不能直接用在一个X x 128的矩阵，需要换成一样大小的向量。
 % optionally add picture of learning algorithm
 
 \subsection*{算法实现}
@@ -331,8 +331,8 @@ CloudVision实现的KMeans词典学习方式支持多种特征不限于128维度
                              initializationMode="random")
         model.save(sc, kmeans_model_path)
         \end{lstlisting}
-        第二行解决上面定义的两个问题，通过Spark RDD的cache函数缓存到内存决迭第一个代算法瓶颈问题，
-        通过flatMap转换一样大小响亮解决第二个问题。
+        第二行解决上面定义的两个问题:通过Spark RDD的cache函数缓存到内存决迭第一个代算法瓶颈问题;
+        通过flatMap转换一样大小向量解决第二个问题。
 
 
   \item 输出
@@ -345,9 +345,9 @@ CloudVision实现的KMeans词典学习方式支持多种特征不限于128维度
 \subsection{特征转码与pooling}
 \label{subsec:feature-encoding}
 学了词典以后我们可以用它把图像的特征转码成最终图像表示。
-CloudVision目前实现了最简单的基于BoW特征转码然后用Sum pooling作出直方图。
+CloudVision目前实现了最简单的基于BoW特征转码，然后用Sum pooling作出直方图。
 这个过程把每个特征关键点的描述子分配到字典里的一个码字，
-然后通过sum pooling统计一个1 x $K$个向量叫BoW图像表示。
+然后通过sum pooling统计一个1 x $K$的向量，也就是BoW图像表示。
 BoW表示向量指数表示第$K$个码字在图像出现了多少次，
 BoW表示是码字的直方图。
 
@@ -360,9 +360,9 @@ BoW表示是码字的直方图。
 调用自己实现的BoW算法实现。实现细节如下：
 \begin{itemize}
   \item 输入和参数 
-        特征转吗需要两个输入：地一个是Parquet特征文件，第二个是KMeans的词典。
-        要求Parquet每一行是一张图像，另外要求有一列叫"features"。KMeans词典使用
-        在上章介绍机器视觉库词典学习程序生产。
+        特征转码需要两个输入：第一个是Parquet特征文件，第二个是KMeans的词典。
+        要求Parquet每一行是一张图像，另外要求有一列叫"features"。KMeans词典由
+        上章介绍的机器视觉库词典学习程序生产。
 
         程序接受的参数如下：
         \begin{itemize}
@@ -387,7 +387,7 @@ BoW表示是码字的直方图。
         兼容文件系统读取词典，解决词典读取IO问题。\cite{spark-programming-guide}
 
         有了词典可以高效分布式执行特征转码过程，使用Spark分布式map操作执行
-        BoW表示函数，BoW函数把每个图像特征矩阵变成一个1 x $K$个响亮表示码字的直方图。
+        BoW表示函数，BoW函数把每个图像特征矩阵变成一个1 x $K$的向量，表示码字的直方图。
         在算法\ref{lst:feature-encoding}可以看到BoW函数核心代码。
         第一行建立Spark KMeansModel。第二行建立一个1 x $K$的向量用来保存BoW表示。
         第三行建立一个循环遍历特征描述矩阵的每个关键点描述子。
@@ -411,7 +411,7 @@ BoW表示是码字的直方图。
         \end{minipage}
 
         所有图像map到了图像表示后，使用Parquet格式保存保存到Hadoop兼容的文件系统。这个过程
-        会分布式从每个Spark executor同时写本地处理的BoW表示写到持久存储。
+        所有Spark executor会并行地将本地处理的BoW表示写到持久存储。
 
       
   \item 输出
@@ -431,17 +431,17 @@ CloudVision实现了主流的SVM分类器，这里说明分布式实现方式和
 
 
 Spark的MLlib已经包括一个binary(single class) SVM分布式分类器实现，
-为了不要重复发明轮子CloudVision基于MLlib现有SVM实现开发。
+为了不重复发明轮子，CloudVision基于MLlib现有SVM实现开发。
 在基于Spark MLlib的SVM开发面对了两个问题：
 \begin{itemize}
-  \item Spark MLlib只提供binary(single) classifier SVM不符合多数机器视觉应用场景。Binary SVM限于分类两种类型，
+  \item Spark MLlib只提供binary(single) classifier SVM，不符合多数机器视觉应用场景。Binary SVM限于分类两种类型，
         但是大部分的机器视觉场景有超过两个类型的分类需求。
   \item 基于Spark MLlib监督机器学习算法需要用它定义的格式，训练数据需要是一个Spark LabeledPoint类型的RDD。
         需要分布式预处理特征BoW表示数据。
 \end{itemize}
 
-CloudVision分类器使用Scala实现，因为Scala可以更紧密的扩展MLlib原有的机器学习方法。
-为了训练分类器先需要预处理数据，
+CloudVision分类器使用Scala实现，因为Scala可以更紧密地扩展MLlib原有的机器学习方法。
+为了训练分类器首先需要预处理数据，
 在\ref{subsec:classifier-training}介绍处理和训练SVM算法分布式实现，
 解决需要符合Spark MLlib格式数据的问题。
 在\ref{subsec:classifier-label}描述多类别SVM的分类算法的实现。
