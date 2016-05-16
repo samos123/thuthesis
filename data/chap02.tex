@@ -383,7 +383,28 @@ HoG的算法把整个图像分成$n$个连在一起的区域(cells)，每个区�
 \label{subsubsec:classifier}
 机器视觉应用的最后一步需要做决策，比如识别的应用得决策看到的特征属于那个类别。
 这一步，一般使用监督机器学习的方法和训练数据集学出来一个模型，将模型在无知的数据做决策。
-机器视觉最经常用到的监督机器学习算法是SVM。
+机器学习算法使用统计技术自动识别数据模式，可以用来作出准确的预测。
+我们这里描述一些在机器视觉常用的监督分类器：
+\begin{wrapfigure}{r}{0.35\textwidth}
+            \centering
+              \captionsetup{justification=centering}
+              \includegraphics[width=0.34\textwidth]{svm-example}
+              \caption{SVM选最优超平面。\cite{law2006simple}}
+            \label{fig:svm-example}
+          \end{wrapfigure}
+
+
+\begin{itemize}
+    \item 支持向量机，SVM分类器算法
+
+          支持向量是一个歧视性的分类器，通过训练生产一个最优
+          的超平面用来分类新无知的数据。\cite{law2006simple}
+          在图\ref{fig:svm-example}可以看到一个二进制类别分类问题，
+          SVM会找出最优的决策边界曲线。其实有多种办法绘制决策边界可以分类两类别，
+          怎么定义最优？SVM算法选的决策边界尽可能远离两类的数据。
+
+    \item Naive Bayes分类器算法是一个概率性的分类器，它使用贝叶斯定理算出类别在数据集出现的概率。
+\end{itemize}
 
 \subsection{相关的软件}
 机器视觉软件简化机器视觉的应用开发和研究，主流
@@ -455,6 +476,7 @@ Apache Hadoop框架核心模块有：
 Hadoop的生态系统。Apache Hadoop大部分代码用Java写的，少部分脚本用Python写的，还有少部分Native代码用C写的。
 
 \subsubsection{Hadoop Distributed File System}
+\label{subsubsec:hdfs}
 HDFS是Hadoop实现的分布式，可扩展，高可用文件系统。一个HDFS集群分两种主要节点：Namenode和Datanode。
 HDFS集群一般有一个Namenode，由它保存记录和目录的层次和namespace(命名空间)。Namenode使用inodes表示文件和目录。Inode记录
 文件和目录的属性比如权限，修改与访问时间，空间配额和命名空间。HDFS把文件的内容分成多个blocks（块），默认一块是128MB，
