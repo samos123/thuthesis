@@ -30,7 +30,7 @@
 CloudVision里面的程序经常需要读写数据集，中间结果和最终结果。
 为了统一化数据结果，CloudVision机器视觉库提出一个通用的合适
 于大数据平台的数据结构。分布式存储面对一个问题是怎么
-高效读写图像数据，在章\ref{subsec:big-data-small-files}我们详细
+高效读写图像数据，在章\ref{subsec:big-data-small-files}详细
 描述该问题，并提出两个解决方法。
 在章\ref{subsec:seq-file}详细介绍第一个方法，用Hadoop SequenceFile
 保存大量图像文件。在章\ref{subsec:parquet}介绍一个
@@ -67,7 +67,7 @@ block复制到多个datanode，默认的Block大小是128MB。如果
 Hadoop的SequenceFile可以包装多个二进制文件到一个大文件。
 目前在CloudVision通过两个方式解决高性能
 批量处理小文件的问题：SequenceFiles和
-Apache Parquet的存储格式。我们用SequenceFile作为
+Apache Parquet的存储格式。机器视觉库用SequenceFile作为
 图片存储，Parquet提供中间结果存储结构比如图片特征。
 
 
@@ -152,13 +152,13 @@ Parquet是提供一个通用的数据列式存储。列式存储
 
 \section{特征抽取}
 \label{sec:feature-extraction}
-在章\ref{intro:image_features}我们介绍了主流的特征，基于深度学习的CNN特征在很多应用场景能达到最好的结果，
-但是SIFT还是最常用的人工特征。我们目前实现了基于SIFT人工特征的特征抽取，
+在章\ref{intro:image_features}本论文介绍了主流的特征，基于深度学习的CNN特征在很多应用场景能达到最好的结果，
+但是SIFT还是最常用的人工特征。目前实现了基于SIFT人工特征的特征抽取，
 在后续的版本也会支持深度学习特征的抽取和模型学习。
 SIFT的局部特征算法有两部分，特征关键点检测和特征描述子。在关键点检测过程找出图像的关键点，然后
 将每个关键点使用特征描述算法计算出一个128维的描述向量。已经有多个开源软件实现SIFT算法，
 包括OpenCV，VLFeat，ImageJ和ezSIFT。OpenCV也支持很多其他人工特征,比如SURF和其他图像处理的算法，
-因此我们选择集成OpenCV到CloudVision。目标是从Spark程序调用OpenCV，实现分布式SIFT特征抽取和OpenCV的其他
+因此选择集成OpenCV到CloudVision。目标是从Spark程序调用OpenCV，实现分布式SIFT特征抽取和OpenCV的其他
 算法。
 
 在前期的调研，网上没找到材料教怎么在Spark怎么调用OpenCV。
@@ -168,14 +168,15 @@ SIFT的局部特征算法有两部分，特征关键点检测和特征描述子�
   \item 从Spark调用OpenCV问题
 
         Spark提供Java，Scala和Python的language bindings。OpenCV提供C++，Java和Python的API。
-        需要保证Spark的每个计算节点能够调用相应的OpenCV接口。在实现过程中我们发现Java的接口不全，
+        需要保证Spark的每个计算节点能够调用相应的OpenCV接口。在实现过程中发现Java的接口不全，
         OpenCV-contrib没有相应的Java接口，因此如果用Java没有提供SIFT特征抽取的接口。OpenCV官方
         在Github确认了存在这个问题。
   \item 从SequenceFile高效读取图像到OpenCV需要格式转换的问题
 
         OpenCV一般从一个文件目录读取图像，在大数据结构所有图像在SequenceFile里面，读的时候直接把图像读到内存。
         在网上的方式都先把图像写到一个暂时的文件然后从暂时文件读到OpenCV的图像Image class，但是这个方式带来Disk IO的瓶颈。
-        我们需要高效从大数据数据结构读取图像到内存，将在内存里的图像直接用OpenCV抽取特征。
+        所以需要高效从大数据数据结构读取图像到内存，将在内存里的图像直接用OpenCV抽取特征。
+
   \item Spark的单任务开销
 
         启动每个Spark任务有开销，因此如果每个任务运行时间很短，这个开销会很显著，造成一个性能问题。
@@ -219,7 +220,7 @@ SIFT的局部特征算法有两部分，特征关键点检测和特征描述子�
         的Spark Executor会在本地的partition执行extractFeatures函数。extractFeatures函数用OpenCV把图像
         转换图像特征。mapPartitions放回一个新的RDD，新的RDD数据有图像文件名字和图像特征。
         在算法\ref{lst:opencv-extract-features}可以看到extractFeatures的核心代码，
-        特点在于从一个Python byte array转换到一个OpenCV的image，在第二行我们把
+        特点在于从一个Python byte array转换到一个OpenCV的image，在第二行把
         在内存里的imgbytes转换成一个numpy.array叫nparr，第三行从nparr生成一个
         OpenCV的image object可以用来抽取特征。在算法\ref{lst:opencv-extract-features}
         的代码描述了怎么高效从大数据结构化的数据抽取特征。
@@ -253,7 +254,7 @@ SIFT的局部特征算法有两部分，特征关键点检测和特征描述子�
 
 \end{itemize}
 
-为了解决Spark单任务开销问题，我们在第二步使用了mapPartitions。在读取的时候保证每个partition包括
+为了解决Spark单任务开销问题，在第二步使用了mapPartitions。在读取的时候保证每个partition包括
 多张图片。根据数据集和服务器数量，可以计算合适的partition数。定义集群总体CPU核数为$c$，数据集
 大小用为$s$单元使用MB，推荐partition数为$p$，那通过在\ref{eq:partition_recommendation}的公式可以推荐partition数。
 \begin{equation} \label{eq:partition_recommendation}
@@ -265,7 +266,7 @@ p = max(c * 3, \frac{s}{32})
 
 \section{特征编码与图像表示}
 \label{sec:image-representation}
-在章\ref{subsubsec:feature-encoding}我们介绍了特征转码和图像表示算法，
+在章\ref{subsubsec:feature-encoding}介绍了特征转码和图像表示算法，
 图像表示比直接原生的特征可以更好的抽象物体的特性。所以在图像分类应用中，
 经常会采用特征转码和图像表示的算法。
 
@@ -343,7 +344,7 @@ CloudVision实现的KMeans词典学习方式支持多种特征，不限于128维
 
 \subsection{特征转码与pooling}
 \label{subsec:feature-encoding}
-学了词典以后我们可以用它把图像的特征转码成最终图像表示。
+学了词典以后可以用它把图像的特征转码成最终图像表示。
 CloudVision目前实现了最简单的基于BoW特征转码，然后用Sum pooling作出直方图。
 这个过程把每个特征关键点的描述子分配到字典里的一个码字，
 然后通过sum pooling统计一个1 x $K$的向量，也就是BoW图像表示。
@@ -383,7 +384,7 @@ BoW表示是码字的直方图。
         在图\ref{fig:cloudvision-feature-encoding}可以看到基于Spark分布式方式
         实现特征转码与表示。第一步从Hadoop兼容存储读取Parquet格式的图像的特征和KMeans model，这里KMeans model
         是在章\ref{subsec:dict-learning}学习的词典(Visual Codebook)。因为每个执行特征转码的Spark Executor都需要
-        用这个词典，我们一次性通过Spark Broadcast变量把词典提前播放的每个Spark Executor的内存，避免每个节点单独从Hadoop
+        用这个词典，可以一次性通过Spark Broadcast变量把词典提前播放的每个Spark Executor的内存，避免每个节点单独从Hadoop
         兼容文件系统读取词典，解决词典读取IO问题。\cite{spark-programming-guide}
 
         有了词典可以高效分布式执行特征转码过程，使用Spark分布式map操作执行
@@ -499,7 +500,7 @@ Spark的MLlib已经包括一个binary(single class) SVM分布式分类器实现�
             训练多类别的SVM分类器方法是每个类别独立训练一个二类分类器。
             假设有$N$个类别，那需要训练$1..N$个二类（binary）SVM分类器。
             在训练第$i$个列别的时候，先需要把数据集里所有不等于$i$的类别设置为$0$，
-            然后将数据集里所有等于$i$的列别设置为$1$。这样我们把问题变成一个
+            然后将数据集里所有等于$i$的列别设置为$1$。这样把问题变成一个
             普通的二类SVM分类器问题。在图\ref{fig:cloudvision-classifier}可以但到最后部分训练的过程。
             在算法\ref{lst:classifier-training}是用pseudocode描述实现方式。
             \begin{lstlisting}[language=Python,
@@ -524,7 +525,7 @@ Spark的MLlib已经包括一个binary(single class) SVM分布式分类器实现�
 
 \subsection{SVM分类器分类算法实现}
 \label{subsec:classifier-label}
-学了SVM模型后，可以将模型用来分类物质的数据。这里我们
+学了SVM模型后，可以将模型用来分类物质的数据。这里
 描述基于多类别SVM模型的分布式SVM分类实现。
 实现细节如下：
 \begin{itemize}

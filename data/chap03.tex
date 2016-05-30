@@ -6,7 +6,7 @@
 控制管理层和业务处理层。用户可以通过Web UI，CLI或者API使用
 CloudVision的服务。 控制层提供对外的API,Web服务用于管理业务集群。业务层
 负责执行机器视觉的任务。控制管理层和业务处理层之间
-基于一个消息队列转达任务和信息。通过分开控制层和处理层我们可以
+基于一个消息队列转达任务和信息。通过分开控制层和处理层可以
 独立扩展两部分，同时保持它们独立性。如果处理性能不足，可以单独
 增加处理层的服务器。
 \begin{figure}[H]
@@ -50,7 +50,7 @@ API层通过AMQP协议发信息到信息任务队列。然后由API workers从
 
 API Workers层的分布式任务队列
 基于Celery实现。\cite{celery}如果API Workers负载和
-任务太多了我们可以随时增加更多的API Workers。新的
+任务太多了可以随时增加更多的API Workers。新的
 API Workers会从任务队列立即分出来新的任务，提供
 Worker层的扩展性。API Workers是分成不同的类型
 独立运行：云平台管理，集群管理，任务管理。
@@ -86,7 +86,7 @@ Job Template（任务模板)，Job（任务)，Datasource（数据源）。
 在图\ref{fig:cloudvision-datamodel}描述每个资源的属性。Cloud(云平台)
 保存不同的公有云的API访问信息，比如如果provider是亚马逊credentials会保存
 AWS access key和secret key。Credentials的数据类型是dynamicDict，不同的Provider
-保存的内容不一样。这个带来NoSQL数据库的灵活性，如果以后需要集成新的公有云我们不用改我们数据结构。
+保存的内容不一样。这个带来NoSQL数据库的灵活性，如果以后需要集成新的公有云不用改数据结构。
 只需要在应用层改动。
 
 Cluster(集群）是保存在云平台上面的机器视觉处理集群。属性params类型是dynamicDict
@@ -265,7 +265,7 @@ Deploy的时候会动态生成集群的Ansible Inventory和Playbook。
         提供Spark MLLib机器学习的库。比如研究员需要执行K-Means算法只需要制定数据集。
   \item 简单化写分布式程序 \\
         在写程序的时候提供更多灵活性。Hadoop Map/Reduce需要按照Map和Reduce
-        框架写程序。在Spark我们一样可以用Map/Reduce，但是也提供很多其他
+        框架写程序。在Spark一样可以用Map/Reduce，但是也提供很多其他
         操作比如Map -> Filter -> Map -> Action。Spark让用户自己定义
         操作的流程。
   \item 简单通用文件格式 \\
@@ -293,7 +293,7 @@ Spark的架构是一个高可用架构，主节点和计算节点都是高可用
         所有处理数据的操作可以直接在内存进行读写。
         对于迭代算法，相比每个迭代等待磁盘IO操作，内存操作将大大提高性能。
         另外，解决Spark任务之间的I/O瓶颈。通过Alluxio内存缓存的分布式存储，
-        我们可以保存Spark任务之间的中间结果。
+        可以保存Spark任务之间的中间结果。
   \item 单节点处理能力优化 \\
         通过GPU加速可以提高单机器的性能。GPU计算主要提供给
         Deep Learning框架Caffe使用。用户创建集群的时候可以选是否需要GPU。
@@ -347,6 +347,6 @@ API Web Servers的负载均衡器。
 集群分成两种类型服务器：主节点和计算节点。主节点管理本
 集群的任务调度和部署。主节点有一个对外提供的IP，对外提供
 SSH服务。这样控制节点可以通过SSH公钥和私钥安全的控制整个集群。
-通过只提供主节点的接口，我们防止其他节点直接从外部网络访问，保证了安全性。这里
+通过只提供主节点的接口，防止其他节点直接从外部网络访问，保证了安全性。这里
 用到的云平台的网络隔离功能。
 
