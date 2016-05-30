@@ -73,6 +73,7 @@ CloudVision也得不停的更新。我打算以开源的模式继续开发和维
         需要调研哪个软件会变成未来的趋势，支持大规模分布式训练。前期调研认为Google开发的
         TensorFlow会变成深度学习的标准。我打算集成TensorFlow到CloudVision里面，让用户
         通过CloudVision部署和管理TensorFlow集群，同时通过CloudVision提交TensorFlow的任务。
+        在章\ref{subsec:deep-learning-int}介绍集成深度学习框架集成的思路。
 
   \item 集成AWS和其他公有云
 
@@ -80,6 +81,48 @@ CloudVision也得不停的更新。我打算以开源的模式继续开发和维
         云平台。未来也可以同样集成其他云平台，比如AWS，Azure，Google Cloud等等。
 
 \end{itemize}
+
+
+\subsection{深度学习集成设计}
+\label{subsec:deep-learning-int}
+近年来，深度学习在机器视觉领域获得了显著的成果的。
+CloudVision为了保持先进性，需要集成主流的深度学习框架，支持
+大规模分布式地执行深度学习算法的任务。CloudVision平台希望用户
+只需要了解深度学习网络的基本参数，由CloudVision平台负责
+自动搭建集群，预处理数据并执行深度学习算法的任务。
+
+CloudVision最终希望可以支持多个深度学习框架，但是最重要
+是可以支持最常用的框架。目前有几个深度学习框架比较流行：
+\begin{itemize}
+  \item Caffe - 在2014年Berkeley的BVLC组发布了Caffe。Caffe支持在单台节点同时用多个GPU并行训练深度卷积神经网络，
+        不支持多台节点的集群方式训练。Caffe在Github有1万个点赞。
+  \item SparkNet - 在2015/2016年Berkeley的AMPLab开发了SparkNet。SparkNet支持在多台同时用多个GPU训练练深度卷积神经网络。底层SparkNet使用Caffe
+        训练模型，用Spark转播训练参数和划分数据。SparkNet在GitHub有378个点赞。
+  \item CaffeOnSpark - 在2015/2016年Yahoo开发了CaffeonSpark。它跟SparkNet很类似，唯一区别是训练参数转播方式，CaffeOnSpark围绕Spark做数据转播，
+        自己实现了一个参数转播方式。CaffeOnSpark在GitHub有634个点赞。
+  \item TensorFlow - 在2015/2016年Google开发了TensorFlow，在多台同时用多个GPU训练练深度卷积神经网络。TensorFlow底层使用gRPC实现分布式训练，没有
+        用到Spark或者Caffe。TensorFlow在GitHub有2.5万个点赞。
+\end{itemize}
+从GitHub的点赞数量判断和Google的支持和推广，本人认为TensorFlow是现在和未来最流行的深度学习框架。因此推荐首先集成TensorFlow。
+
+\subsubsection{实现方式}
+在CloudVision可以按照下面方式集成TensorFlow：
+\begin{itemize}
+  \item 在控制管理层支持TensorFlow集群，需要在API层添加一个新的集群类型，
+        另外需要写新的Ansible Roles和Playbook提供自动化部署功能，包括部署TensorFlow本身和它依赖软件比如Nvidia CUDA。
+  \item 在机器视觉库需要添加基于TensorFlow深度学习的应用。第一个视觉库的应该用使用TensorFlow分布式训练模型，
+        第二个应用使用TensorFlow模型提供分类器，
+        第三个使用TensorFlow的模型提供特征抽取的功能。
+\end{itemize}
+
+
+\subsubsection{规划的实验}
+为了证明深度学习的集成建议做2个实验：
+第一个实验用亚马逊GPU集群测试不同深度学习框架的性能，
+第二个实验用亚马逊GPU集群测测试TensorFlow集成的横向扩展性。
+
+
+
 
 
 
