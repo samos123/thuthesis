@@ -1,4 +1,4 @@
-\chapter{机器视觉，大数据和云计算的现状}
+\chapter{相关技术研究}
 \label{sec:current_state}
 
 \section{机器视觉研究现状}
@@ -32,7 +32,7 @@
 在图\ref{fig:cloudvision-cvworkflow}可以看到第一步从训练数据
 抽取特征，用特征和结果标记训练出来模型。在分类阶段，可以使用无标的
 图片抽取特征，然后使用学习好的模型给图片分类。
-\begin{figure}[H]
+\begin{figure}[h]
   \centering
     \includegraphics[width=0.98\textwidth,trim=1 1 4 1,clip]{cloudvision-cvworkflow}
   \caption{机器视觉主流作法}
@@ -66,7 +66,7 @@ SIFT(Scale-invariant feature transform，尺度不变特征转换)。\cite{lowe1
 在2006发布的Beyond Bags of Features: Spatial Pyramid Matching
 for Recognizing Natural Scene Categories，做了BoW和SIFT的改进
 达到了新的最先进的结果。 \cite{lazebnik2006beyond}
-在本章\ref{subsubsec:image_features}
+在本章\ref{intro:image_features}
 会详细介绍抽SIFT和相关特征的方法与编码方式比如BoW，VLAD和Fisher Vectors。
 
 从2010开始，深入学习给神经网络带来了新的活力。
@@ -121,27 +121,27 @@ SVM到现在一直站稳了分类器的首选位子，无论用深度学习
 最后介绍一个主流的全局特征HOG。
 
 \subsubsection{SIFT特征}
-SIFT(Scale-invariant feature transform，尺度不变特征转换)是
-一个局部特征描述。\cite{lowe1999object}为了可靠的识别，很重要的是抽取的特征
-在图像大小，旋转，噪点和声的变化中，一样可以检测到图像的兴趣点。
-这样的点一般在图像的高对比度的区域，比如物体的边缘。
-另外一个重要的特点是，兴趣点之间的相对位子信息不影响物体检测。
-SIFT主要在物体检测和分类使用。
-
-SIFT的算法分两段：特征关键点检测和特征描述。在特征关键点检测阶段，
-SIFT找出所有兴趣点。在特征描述，SIFT从每个关键点抽取一个128维的
-向量描述各个关键点。\cite{wiki:sift}
-在图\ref{fig:sift-keypoints-localization}可以看到SIFT检测到的
-关键点的例子，每个圈子表示一个SIFT的关键点。
-
-\clearpage
-\paragraph*{特征关键点检测}
 \begin{wrapfigure}{r}{0.33\textwidth}
   \centering
     \includegraphics[width=0.32\textwidth]{sift_keypoints_localization}
     \caption{SIFT关键点检测过程。图片源：\cite{wiki:sift}}
   \label{fig:sift-keypoints-localization}
 \end{wrapfigure}
+
+SIFT(Scale-invariant feature transform，尺度不变特征转换)是
+一个局部特征描述。\cite{lowe1999object}为了可靠的识别，很重要的是抽取的特征
+在图像大小，旋转，噪点和声的变化中，一样可以检测到图像的兴趣点。
+这样的点一般在图像的高对比度的区域，比如物体的边缘。
+另外一个重要的特点是，兴趣点之间的相对位置信息不影响物体检测。
+SIFT主要在物体检测和分类使用。
+
+SIFT的算法分两段：特征关键点检测和特征描述。在特征关键点检测阶段，
+SIFT找出所有兴趣点。在特征描述，SIFT从每个关键点抽取一个128维的
+向量描述各个关键点。\cite{wiki:sift}
+在图\ref{fig:sift-keypoints-localization}可以看到SIFT检测到的
+关键点的例子，每个圈表示一个SIFT的关键点。
+
+\paragraph*{特征关键点检测}
 SIFT特征关键点提取算法第一步，是为了边缘检测，在多个尺度用高斯滤波器，
 提取不同尺度高斯模糊的图像的最大值或者最小值高斯差距。
 高斯差DoG定义成$D \left( x, y, \sigma \right)$。
@@ -184,13 +184,6 @@ SIFT算出在关键点Hessian矩阵的两个特征值，然后用两个特征值
                   + \left( L \left( x, y+1 \right) - L \left( x, y-1 \right) \right)^2}$$
 算出梯度幅度的公式：$$\theta \left( x, y \right) = \mathrm{atan2}\left(L \left( x, y+1 \right) - L \left( x, y-1 \right),
                L \left( x+1, y \right) - L \left( x-1, y \right) \right)$$
-\begin{wrapfigure}{r}{0.49\textwidth}
-  \centering
-    \includegraphics[width=0.48\textwidth]{sift-orientation-histogram}
-    \caption{SIFT关键点梯度直方图例子。 \\
-             图片源：\cite{aishack:sift-orientation}}
-  \label{fig:sift-orientation-histogram}
-\end{wrapfigure}
 然后用一个直方图统计每个像素点的方向。直方图分成36个方块，
 每一个方块表示10度，比如方块1表示所有0-9度的方向像素点，方块2表示
 10-19度。那如果周边像素点方向是15度会加入到方块2，
@@ -201,6 +194,14 @@ SIFT算出在关键点Hessian矩阵的两个特征值，然后用两个特征值
 在图\ref{fig:sift-orientation-histogram}的关键点梯度方向直方图的例子，
 20-29度的方块 是直方图的高峰，310-319度的方块是在高峰的80\%以内，因此本关键点
 会分配20-29度的方向，同时克隆一个新的关键点分配310-319度。
+\begin{figure}
+  \centering
+    \includegraphics[width=0.48\textwidth]{sift-orientation-histogram}
+    \caption{SIFT关键点梯度直方图例子。
+             图片源：\cite{aishack:sift-orientation}}
+  \label{fig:sift-orientation-histogram}
+\end{figure}
+
 
 \paragraph*{特征描述}
 检测到了图像的关键点和分配了方向后，SIFT可以算出来每个关键点的特征描述向量，
@@ -251,7 +252,6 @@ SURF关键点检测过程，先计算积分图，然后用Hessian矩阵的行列
 SURF特征描述在每个关键点，基于积分图快速计算Haar特征的总和作为
 特征描述向量。
 
-\clearpage
 \begin{wrapfigure}{r}{0.49\textwidth}
   \centering
     \includegraphics[width=0.48\textwidth]{fast_detector}
@@ -697,17 +697,17 @@ Identity服务验证API请求是否有认证和权限。Compute(Nova)服务通�
 提供网络资源的服务。Block Storage(Cinder)服务提供给Compute服务
 块存储，块存储可以理解为虚拟硬盘服务。Image(Glance)服务保存
 Compute服务的镜像，比如操作系统镜像或者用户传上的应用镜像。
-Object Storage(Swift)是OpenStack的对象存储，保存任何文件，
-Image服务可以配成用对象存储保存镜像的文件。Dashboard(Horizon)
-是为所有组建提供Web界面，调用各个组建的RESTful API。了解到核心组建与
-关系后，下面介绍计算，网络和存储组件的详细功能和实现方法。
-
 \begin{wrapfigure}{r}{0.40\textwidth}
   \centering
     \includegraphics[width=0.39\textwidth]{openstack-comp-arch}
     \caption{OpenStack组建通用架构}
   \label{fig:openstack-comp-arch}
 \end{wrapfigure}
+Object Storage(Swift)是OpenStack的对象存储，保存任何文件，
+Image服务可以配成用对象存储保存镜像的文件。Dashboard(Horizon)
+是为所有组建提供Web界面，调用各个组建的RESTful API。了解到核心组建与
+关系后，下面介绍计算，网络和存储组件的详细功能和实现方法。
+
 OpenStack的每个组建都遵循统一个架构。在图\ref{fig:openstack-comp-arch}可以看到通用的架构，
 每个组建有一个API层，负责提供对外的基于HTTP的RESTful API服务。如果API请求需要额外
 处理比如创建虚拟机，API层会传信息到Message Queue，让任一个代理服务接受信息并且处理。

@@ -227,18 +227,19 @@ SIFT的局部特征算法有两部分，特征关键点检测和特征描述子�
         \begin{minipage}{\linewidth}
         \begin{lstlisting}[language=Python,
                            basicstyle=\small,
+                           numbers=left,
                            showstringspaces=false,
                            caption={OpenCV从内存读取图像抽取特征},
                            label={lst:opencv-extract-features}]
-        imgfilename, imgbytes = imgfile_imgbytes
-        nparr = np.fromstring(buffer(imgbytes), np.uint8)
-        img = cv2.imdecode(nparr, 0)
-        if feature_name in ["surf", "SURF"]:
-            extractor = cv2.SURF()
-        elif feature_name in ["sift", "SIFT"]:
-            extractor = cv2.SIFT()
-        kp, descriptors = extractor.detectAndCompute(img, None)
-        return [(imgfilename, descriptors)]
+imgfilename, imgbytes = imgfile_imgbytes
+nparr = np.fromstring(buffer(imgbytes), np.uint8)
+img = cv2.imdecode(nparr, 0)
+if feature_name in ["surf", "SURF"]:
+    extractor = cv2.SURF()
+elif feature_name in ["sift", "SIFT"]:
+    extractor = cv2.SIFT()
+kp, descriptors = extractor.detectAndCompute(img, None)
+return [(imgfilename, descriptors)]
         \end{lstlisting}
         \end{minipage}
 
@@ -325,11 +326,11 @@ CloudVision实现的KMeans词典学习方式支持多种特征，不限于128维
                            numbers=left,
                            caption={词典学习核心代码},
                            label={lst:kmeans-dictionary}]
-        features = sqlContext.read.parquet(feature_parquet_path)
-        flattened_features = features.flatMap(lambda x: x['features']).cache()
-        model = KMeans.train(flattened_features, k, maxIterations=maxIter,
-                             initializationMode="random")
-        model.save(sc, kmeans_model_path)
+features = sqlContext.read.parquet(feature_parquet_path)
+flattened_features = features.flatMap(lambda x: x['features']).cache()
+model = KMeans.train(flattened_features, k, maxIterations=maxIter,
+                     initializationMode="random")
+model.save(sc, kmeans_model_path)
         \end{lstlisting}
         第二行解决上面定义的两个问题:通过Spark RDD的cache函数缓存到内存决迭第一个代算法瓶颈问题;
         通过flatMap转换一样大小向量解决第二个问题。
@@ -401,13 +402,13 @@ BoW表示是码字的直方图。
                            showstringspaces=false,
                            caption={BoW特征转码核心代码},
                            label={lst:feature-encoding}]
-        model = KMeansModel(dictionary)
-        bow = np.zeros(len(dictionary))
-        for keypoint_descriptor in feature_matrix:
-            k = model.predict(keypoint_descriptor)
-            if pooling = "sum":
-                bow[k] += 1
-        return bow
+model = KMeansModel(dictionary)
+bow = np.zeros(len(dictionary))
+for keypoint_descriptor in feature_matrix:
+    k = model.predict(keypoint_descriptor)
+    if pooling = "sum":
+        bow[k] += 1
+return bow
         \end{lstlisting}
         \end{minipage}
 
@@ -509,12 +510,11 @@ Spark的MLlib已经包括一个binary(single class) SVM分布式分类器实现�
                                showstringspaces=false,
                                caption={SVM多类别分类器训练pseudocode},
                                label={lst:classifier-training}]
-            svm_classifiers = []
-            for classid in classes:
-                binary_label_features = features_bow.map(to_binary_label)
-                svm_classifiers.append(SVMWithSGD.train(binary_label_features))
+svm_classifiers = []
+for classid in classes:
+    bin_labels = features_bow.map(to_bin_label)
+    svm_classifiers.append(SVMWithSGD.train(bin_labels))
             \end{lstlisting}
-
 
         \end{itemize}
   \item 输出
@@ -551,12 +551,12 @@ Spark的MLlib已经包括一个binary(single class) SVM分布式分类器实现�
                            showstringspaces=false,
                            caption={SVM多类别分类器分类pseudocode},
                            label={lst:classifier-training}]
-        scores = []
-        for classifier in svm_classifiers:
-            score, classid = classifier.predict(features_bow)
-            scores.append( (score, classid) )
+scores = []
+for classifier in svm_classifiers:
+    score, classid = classifier.predict(features_bow)
+    scores.append( (score, classid) )
 
-        return scores.sortByScore.getFirst.getClassid
+return scores.sortByScore.getFirst.getClassid
 
         \end{lstlisting}
 

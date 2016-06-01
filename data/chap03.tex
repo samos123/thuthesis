@@ -11,7 +11,7 @@ CloudVision的服务。 控制层提供对外的API,Web服务用于管理业务�
 增加处理层的服务器。
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.55\textwidth]{cloudvision-arch}
+  \includegraphics[width=0.36\textwidth]{cloudvision-arch}
   \caption{CloudVision 总体架构}
   \label{fig:cloudvision-arch}
 \end{figure}
@@ -103,20 +103,34 @@ argumentTemplate保存任务的参数和参数类型。如果要创建一个任�
 可以自己定义任务模板，同时CloudVision也自带一些常用的任务模板，
 比如SIFT Feature Extraction。以下是Feature Extraction作为一个任务
 模板的例子：
-\begin{lstlisting}[language=Python,basicstyle=\tiny,showstringspaces=false]
-{
-    "name": "Feature Extraction",
-    "type": "PySpark",
-    "jobLocation": "http://cloudvision.org/feature_extraction.py",
-    "argumentsTemplate": {
-        "feature_type": {"type": "string", "allowed": ["SIFT", "SURF"]},
-        "image_parquet_path": {"type": "InputLocation"},
-        "feature_parquet_path": {"type": "OutputLocation"},
-        "partitions": {"type": "number"},
-        "formatString": "$feature_type $image_parquet_path $feature_parquet_path $partitions"
-    }
-}
-\end{lstlisting}
+\begin{itemize}
+  \item name = Feature Extraction
+  \item type = PySpark
+  \item joblocation = http://xx.com/feature\_extraction.py
+  \item argumentsTemplate
+        \begin{itemize}
+            \item feature\_type = \{type: string, allowed=SIFT,SURF\}
+            \item image\_parquet\_path = \{type: InputLocation\}
+            \item feature\_parquet\_path = \{type: OutputLocation\}
+            \item  partitions = \{type: integer\}
+            \item  formatString = "\$feature\_type \$image\_parquet\_path \$feature\_parquet\_path \$partitions"
+        \end{itemize}
+\end{itemize}
+
+%\begin{lstlisting}[language=Python,basicstyle=\tiny,showstringspaces=false]
+%{
+%    "name": "Feature Extraction",
+%    "type": "PySpark",
+%    "jobLocation": "http://cloudvision.org/feature_extraction.py",
+%    "argumentsTemplate": {
+%        "feature_type": {"type": "string", "allowed": ["SIFT", "SURF"]},
+%        "image_parquet_path": {"type": "InputLocation"},
+%        "feature_parquet_path": {"type": "OutputLocation"},
+%        "partitions": {"type": "number"},
+%        "formatString": "$feature_type $image_parquet_path $feature_parquet_path $partitions"
+%    }
+%}
+%\end{lstlisting}
 
 DataSource管理常用的一些数据集。可以通过InputLocation作为任务的输入和输出。
 主要提供一个可以记录常用数据的目录和访问方法。
@@ -139,8 +153,7 @@ DataSource管理常用的一些数据集。可以通过InputLocation作为任务
 \begin{table}[H]
   \centering
   \begin{minipage}[t]{0.98\linewidth} % 如果想在表格中使用脚注，minipage是个不错的办法
-  \caption[CloudVision API接口列表]{CloudVision REST API接口列表。
-    所有资源URI有一个baseURL开头。比如\url{http://api.cloudvision.org/clouds}是Clouds完整的URI。}
+  \caption[CloudVision API接口列表]{CloudVision REST API接口列表}
   \label{tab:cloudvision-api}
     \begin{tabularx}{\linewidth}{lXXXX}
       \toprule[1.5pt]
